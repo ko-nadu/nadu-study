@@ -168,9 +168,9 @@ a.hit .s{font-size:15px;color:var(--muted);line-height:1.5}
 .lock h1{font-size:22px;margin:14px 0 4px}
 .lock p{color:var(--muted);margin:0 0 18px;font-size:15px}
 .lock input{width:100%;height:52px;border-radius:14px;border:1px solid var(--line);background:var(--card);color:var(--text);padding:0 16px;font-size:16px;margin-bottom:10px}
-.lock button{width:100%;height:52px;border-radius:14px;border:0;background:var(--accent);color:#fff;font-weight:800;font-size:16px}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .lock button{color:#06121d}}
-:root[data-theme="dark"] .lock button{color:#06121d}
+.lock form button{width:100%;height:52px;border-radius:14px;border:0;background:var(--accent);color:#fff;font-weight:800;font-size:16px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .lock form button{color:#06121d}}
+:root[data-theme="dark"] .lock form button{color:#06121d}
 .lock .err{color:var(--need);min-height:24px;font-size:14px}
 .foot{color:var(--muted);font-size:13px;text-align:center;margin-top:24px}
 .foot button{background:none;border:1px solid var(--line);color:var(--muted);border-radius:12px;min-height:44px;padding:0 16px;margin-top:8px;font-size:14px}
