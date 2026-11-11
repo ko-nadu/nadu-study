@@ -183,11 +183,6 @@ a.hit .s{font-size:15px;color:var(--muted);line-height:1.5}
 .install button{flex:none;min-height:44px;padding:0 16px;border-radius:12px;border:0;background:var(--accent);color:#fff;font-weight:800}
 .toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 76px);transform:translateX(-50%);z-index:40;background:var(--text);color:var(--bg);
   padding:10px 16px;border-radius:12px;font-size:14.5px;font-weight:700;box-shadow:0 4px 14px rgba(0,0,0,.25);max-width:calc(100% - 32px)}
-.instpop{position:fixed;top:calc(env(safe-area-inset-top) + 62px);right:10px;z-index:35;display:flex;align-items:center;gap:6px;
-  background:var(--card);border:1px solid var(--line);border-radius:14px;padding:6px 6px 6px 12px;box-shadow:0 6px 20px rgba(0,0,0,.18);font-size:14px;font-weight:700;max-width:calc(100% - 20px);animation:pop .25s ease-out}
-.instpop .go{min-height:44px;padding:0 14px;border:0;border-radius:10px;background:var(--accent);color:var(--bg);font-weight:800}
-.instpop .no{width:44px;height:44px;border:0;background:none;color:var(--muted);font-size:20px}
-@keyframes pop{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
 figure.fig{margin:12px 0 14px;padding:12px;background:var(--bg);border:1px solid var(--line);border-radius:14px}
 figure.fig svg{display:block;max-width:420px;margin:0 auto;font-family:inherit}
 figure.fig img{display:block;width:100%;height:auto;border-radius:10px}
@@ -289,6 +284,9 @@ h3.sec{margin:18px 4px 8px;font-size:15px}
 
 /* 주제 음성 듣기(공유용 · 2026-11-11) */
 .aud .big-btn{margin:10px 0 6px}
+/* 폰에 설치하기 카드(홈 맨 위 · 2026-11-11) */
+.inst{padding:10px}.inst-r{display:flex;gap:8px;align-items:center}.inst-r .big-btn{flex:1;margin:0}
+.inst-x{width:50px;min-height:50px;margin:0;padding:0;font-size:22px}.inst-g{margin:10px 2px 2px;line-height:1.55}
 .aud-r{display:flex;align-items:center;gap:8px;margin-top:6px}
 .aud-r input[type=range]{flex:1;min-width:0}
 .aud-r .ghost{flex:none;padding:6px 10px}

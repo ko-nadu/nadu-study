@@ -3,7 +3,7 @@
 // 외부 서버로 보내는 요청은 없다(같은 주소의 파일만 받는다).
 (() => {
   const NS = "ns_", APP = "나두 학습";
-  const K = {key: NS + "key", theme: NS + "theme", inst: NS + "inst_dismiss", akey: NS + "admin_key", qlog: NS + "quiz_log",
+  const K = {key: NS + "key", theme: NS + "theme", inst: NS + "inst_home", akey: NS + "admin_key", qlog: NS + "quiz_log",
              qdraft: NS + "quiz_draft", last: NS + "last", rate: NS + "aud_rate", pos: NS + "aud_pos_", upd: NS + "upd"};
   const $ = s => document.querySelector(s);
   const app = $("#app");
@@ -30,20 +30,29 @@
   document.addEventListener("click", e => { if (e.target.closest("#updtop")) applyUpd(); });
   document.addEventListener("click", e => { if (e.target.closest("[data-th]")) { const c = getTh(); setTh(TH[(TH.indexOf(c) + 1) % 3]); } });
 
-  // ---- 설치 팝업: 맨 위 한쪽에 작게 · 닫으면 14일간 안 뜸 · 설치된 앱 안에서는 안 뜸
+  // ---- 폰에 설치하기: 홈 맨 위 카드 · 설치 전이면 처음부터 · ×로 닫거나 설치하면 이 폰에서 다시 안 뜸 · 설치된 앱 안에서는 안 뜸
+  //   (2026-11-11 대표님 「처음 접속시에만 홈 화면 위에 폰에 설치하기 단추」 — 오른쪽 위 작은 팝업은 없앰)
   const standalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
-  const dismissed = () => Date.now() < +ls.get(K.inst, 0);
-  function showInstall() {
-    if (!BIP || standalone() || dismissed() || document.getElementById("inst")) return;
-    const el = document.createElement("div"); el.id = "inst"; el.className = "instpop"; el.setAttribute("role", "dialog");
-    el.innerHTML = `<span>📲 앱으로 설치할까요?</span><button type="button" class="go">설치</button><button type="button" class="no" aria-label="닫기">×</button>`;
-    document.body.appendChild(el);
-    el.querySelector(".go").onclick = async () => { const b = BIP; hideInstall(); if (!b) return; b.prompt(); try { await b.userChoice; } catch (e) {} BIP = null; };
-    el.querySelector(".no").onclick = () => { ls.set(K.inst, Date.now() + 14 * 864e5); hideInstall(); };
+  const instOff = () => standalone() || ls.get(K.inst, "") === "off";
+  const instH = () => instOff() ? "" : `<div class="card inst" id="inst"><div class="inst-r"><button type="button" class="big-btn" id="instgo">폰에 설치하기</button><button type="button" class="ghost inst-x" id="instx" aria-label="설치 안내 닫기">×</button></div><div class="inst-g small" id="instg" hidden></div></div>`;
+  function instGuide() {
+    const ua = navigator.userAgent;
+    if (/KAKAOTALK|NAVER\(|Instagram|FBAN|FBAV|Line\//i.test(ua)) return "앱 안 브라우저라 설치가 안 됩니다. 오른쪽 위 메뉴의 <b>다른 브라우저로 열기</b>(크롬·사파리) 뒤 다시 눌러 주세요.";
+    if (/iPhone|iPad|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) return "사파리 아래쪽 <b>공유 단추</b>(네모에 위쪽 화살표) → <b>홈 화면에 추가</b>";
+    if (/SamsungBrowser/.test(ua)) return "아래쪽 <b>≡ 메뉴</b> → <b>현재 페이지 추가</b> → <b>홈 화면</b>";
+    return "오른쪽 위 <b>⋮ 메뉴</b> → <b>앱 설치</b> 또는 <b>홈 화면에 추가</b>";
   }
-  const hideInstall = () => { const el = document.getElementById("inst"); if (el) el.remove(); };
-  window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); BIP = e; if (window.__appReady) showInstall(); });
-  window.addEventListener("appinstalled", () => { BIP = null; hideInstall(); });
+  const instClose = () => { ls.set(K.inst, "off"); const el = document.getElementById("inst"); if (el) el.remove(); };
+  function instBind() {
+    const go = $("#instgo"); if (!go) return;
+    go.onclick = async () => {
+      if (BIP) { const b = BIP; BIP = null; b.prompt(); try { const c = await b.userChoice; if (c && c.outcome === "accepted") instClose(); } catch (e) {} return; }
+      const g = $("#instg"); g.innerHTML = instGuide(); g.hidden = false;
+    };
+    $("#instx").onclick = instClose;
+  }
+  window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); BIP = e; });
+  window.addEventListener("appinstalled", () => { BIP = null; instClose(); });
 
   // ---- 암호
   const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
@@ -195,7 +204,7 @@
       ? `<div class="subj one" data-subj="${subs[0].id}"><div class="sj-h">${subHead(subs[0])}</div>${subs[0].desc ? `<p class="sj-d">${escH(subs[0].desc)}</p>` : ""}${partsToc(subs[0].parts)}</div>`
       : subs.map(s => `<details class="subj" data-subj="${s.id}"><summary class="sj-h">${subHead(s)}</summary>${s.desc ? `<p class="sj-d">${escH(s.desc)}</p>` : ""}${partsToc(s.parts)}</details>`).join("");
     app.innerHTML = bar() + `<div class="wrap">${updTop()}
-      <div class="hello">한 주제씩,<br>아는 것을 쌓아갑니다.</div>
+      ${instH()}<div class="hello">한 주제씩,<br>아는 것을 쌓아갑니다.</div>
       <div class="search"><input id="q" type="search" placeholder="용어·주제 검색 (예: 토큰)" aria-label="검색" enterkeyhint="search"><button class="x" id="qx" aria-label="지우기" hidden>×</button></div>
       <div id="res"></div><div id="main">
       ${contCard()}
@@ -211,6 +220,7 @@
       const hs = search(v);
       $("#res").innerHTML = `<div class="card res">${hs.length ? hs.map(h => `<a class="hit" ${h.pid ? `href="#/p/${h.pid}/${h.sid}"` : ""}><div class="w">${h.arc ? '<span class="arc">기록 · </span>' : ""}${escH(h.pt)} › ${escH(h.st.replace(/\s*\(.*$/, ""))}</div><div class="s">${snippet(h.raw, v)}</div></a>`).join("") : `<div class="empty">찾는 내용이 없습니다.</div>`}</div>`;
     };
+    instBind();
     q.oninput = run; qx.onclick = () => { q.value = ""; run(); q.focus(); };
     try { const s = sessionStorage.getItem(NS + "q"); if (s) { q.value = s; run(); } } catch (e) {}
   }
@@ -402,7 +412,6 @@
     top.onclick = () => window.scrollTo({top: 0, behavior: "smooth"});
     try { if (sessionStorage.getItem(K.upd)) { sessionStorage.removeItem(K.upd); toast("새 정리가 반영됐습니다 · " + D.built); } } catch (e) {}
     window.__appReady = true;
-    showInstall();
     document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") refresh(true); });
     setInterval(() => { if (document.visibilityState === "visible") refresh(false); }, 10 * 60 * 1000);
   }
