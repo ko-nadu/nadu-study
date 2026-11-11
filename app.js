@@ -1,4 +1,4 @@
-// 나두 학습 — 잠금 해제 → 홈(검색·이어서 보기·지식 수준·과목 목차) · 교재 · 용어집 · 문제(객관식) · 대표님 전용(음성·학습 기록).
+// 나두 학습 — 잠금 해제 → 홈(검색·이어서 보기·지식 수준·과목 목차) · 교재 · 용어집 · 문제(객관식) · 듣기(음성) · 대표님 전용(학습 기록).
 // 내용은 data.enc.json(공유용) · data.admin.enc.json(전용)에만 암호문으로 있다. 저장 키는 모두 "ns_" 앞머리(같은 주소의 다른 앱과 섞이지 않게).
 // 외부 서버로 보내는 요청은 없다(같은 주소의 파일만 받는다).
 (() => {
@@ -87,7 +87,7 @@
     $("#pw").focus();
   }
 
-  // ---- 대표님 전용 묶음(음성·학습 기록) — 전용 비밀번호로 따로 잠겨 있다
+  // ---- 대표님 전용 묶음(학습 기록) — 전용 비밀번호로 따로 잠겨 있다
   async function loadAdmin() {
     const saved = ls.get(K.akey, ""); if (!saved) return;
     let enc; try { enc = await fetchAdm(); } catch (e) { return; }
@@ -96,7 +96,7 @@
     if (salt !== enc.salt) { ls.del(K.akey); return; }
     try { A = await decrypt(b64(k), enc); ACT = enc.ct; Object.assign(D.pages, A.pages); } catch (e) { ls.del(K.akey); A = null; }
   }
-  const akeyRaw = () => { const v = ls.get(K.akey, ""); return v ? b64(v.split(".")[1]) : null; };
+  const keyRaw = () => { const v = ls.get(K.key, ""); return v ? b64(v.split(".")[1]) : null; };   // 공유용 열쇠(음성도 이것으로 푼다)
 
   // ------------------------------------------------------------ 검색
   const norm = s => (s || "").toLowerCase().replace(/[·\-‐–—_/()\[\]「」"'`]/g, " ").replace(/\s+/g, " ").trim();
@@ -229,7 +229,7 @@
         ? `<div class="stale"><b>확인한 지 오래됨</b> — 마지막 확인 ${escH(t.checked)}(${age}일 전). 도구 기능·이름·가격은 그사이 바뀌었을 수 있습니다.</div>`
         : `<div class="muted small checked">마지막 확인 ${escH(t.checked)}</div>`;
     }
-    const au = A && t && A.audio && A.audio[pid];
+    const au = t && D.audio && D.audio[pid];
     const audH = au ? `<div class="card aud"><div><b>🎧 듣기</b> <span class="muted small">두 진행자 대화 · 약 ${Math.round(au.dur / 60)}분 · 화면을 꺼도 이어집니다</span></div>
       <button type="button" class="big-btn" id="aplay">${AUD.tid === pid && !AUD.el.paused ? "❚❚ 일시정지" : "▶ 듣기"}</button>
       <div class="aud-r"><button type="button" class="ghost" data-sk="-10">« 10초</button><input type="range" id="aseek" min="0" max="${au.dur}" value="0" aria-label="재생 위치"><button type="button" class="ghost" data-sk="10">10초 »</button></div>
@@ -313,8 +313,8 @@
   function settings() {
     app.innerHTML = bar("설정", "#/") + `<div class="wrap">
       <div class="card set"><h2>화면 보기</h2><div class="seg">${TH.map(t => `<button type="button" class="segb${getTh() === t ? " on" : ""}" data-set-th="${t}">${THL[t]}</button>`).join("")}</div></div>
-      <div class="card set"><h2>대표님 전용 (음성 · 학습 기록)</h2>${A
-        ? `<p class="muted small">열려 있습니다 — 교재 위에 듣기, 아래 메뉴에 기록이 보입니다.</p><button type="button" class="ghost" id="aoff">전용 닫기</button>`
+      <div class="card set"><h2>대표님 전용 (학습 기록)</h2>${A
+        ? `<p class="muted small">열려 있습니다 — 아래 메뉴에 기록이 보입니다.</p><button type="button" class="ghost" id="aoff">전용 닫기</button>`
         : `<form id="af"><input id="apw" type="password" autocomplete="off" placeholder="전용 비밀번호" aria-label="전용 비밀번호"><div class="err" id="aer"></div><button>열기</button></form>`}</div>
       <div class="card set"><h2>문제 기록</h2><p class="muted small">푼 기록 ${qlog().length}건 · 이 기기에만 저장됩니다.</p><button type="button" class="ghost" id="qclr">문제 기록 지우기</button></div>
       <div class="card set"><button type="button" class="ghost" id="lo">이 기기에서 잠그기</button></div></div>` + nav("settings");
@@ -336,7 +336,7 @@
     window.scrollTo(0, 0);
   }
 
-  // ------------------------------------------------------------ 음성(대표님 전용) — 전용 열쇠로 암호화된 음성을 받아 이 기기 보관함에 두고, 풀어서 재생
+  // ------------------------------------------------------------ 음성(공유용) — 공유용 열쇠로 암호화된 음성을 받아 이 기기 보관함에 두고, 풀어서 재생
   const AUD = {el: new Audio(), tid: "", url: ""};
   const fmtT = s => { s = Math.max(0, Math.floor(s || 0)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
   async function audLoad(tid, au) {
@@ -350,7 +350,7 @@
       }
       buf = new Uint8Array(await r.arrayBuffer());
     } catch (e) { const r = await fetch(au.f, {cache: "no-store"}); if (!r.ok) throw new Error("HTTP " + r.status); buf = new Uint8Array(await r.arrayBuffer()); }
-    const k = await crypto.subtle.importKey("raw", akeyRaw(), "AES-GCM", false, ["decrypt"]);
+    const k = await crypto.subtle.importKey("raw", keyRaw(), "AES-GCM", false, ["decrypt"]);
     const pt = await crypto.subtle.decrypt({name: "AES-GCM", iv: buf.slice(0, 12)}, k, buf.slice(12));
     return URL.createObjectURL(new Blob([pt], {type: "audio/mpeg"}));
   }
