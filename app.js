@@ -392,11 +392,27 @@
     sk.oninput = () => { if (AUD.tid === tid) el.currentTime = +sk.value; else ls.set(pk, sk.value); tm.textContent = `${fmtT(+sk.value)} / ${fmtT(au.dur)}`; };
     rt.onchange = () => { ls.set(K.rate, rt.value); el.playbackRate = +rt.value; };
   }
+  // 멈춤 — 주제 화면을 떠나거나 앱이 닫힐 때(2026-11-11 대표님): 들은 위치 저장 → 재생기 비움 → 폰 알림창 재생 조절 지움
+  // 화면 끄기·홈으로 나가기(가려짐)는 멈추지 않는다(대표님 결정 「계속 듣기」)
+  function audStop() {
+    const el = AUD.el;
+    if (!AUD.tid) return;
+    if (!el.ended) ls.set(K.pos + AUD.tid, String(Math.floor(el.currentTime)));
+    AUD.tid = ""; el.pause(); el.removeAttribute("src"); el.load();
+    if (AUD.url) { URL.revokeObjectURL(AUD.url); AUD.url = ""; }
+    if ("mediaSession" in navigator) {
+      navigator.mediaSession.metadata = null; navigator.mediaSession.playbackState = "none";
+      for (const a of ["play", "pause", "seekbackward", "seekforward"]) try { navigator.mediaSession.setActionHandler(a, null); } catch (e) {}
+    }
+  }
+  window.addEventListener("pagehide", audStop);
+  document.addEventListener("freeze", audStop);
   window.__audio = AUD;   // 점검용(재생 길이 확인)
 
   // ------------------------------------------------------------ 길 찾기 · 시작 · 새 정리 반영
   function route() {
     const h = location.hash.replace(/^#\/?/, "").split("/");
+    if (AUD.tid && !(h[0] === "p" && h[1] && decodeURIComponent(h[1]) === AUD.tid)) audStop();   // 듣던 주제 화면이 아니면 멈춤
     if (h[0] === "p" && h[1]) page(decodeURIComponent(h[1]), h[2] && decodeURIComponent(h[2]));
     else if (h[0] === "archive") { if (A) archive(); else location.hash = "#/"; }
     else if (h[0] === "settings") settings();
