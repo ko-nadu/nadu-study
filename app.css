@@ -317,3 +317,16 @@ a.big-btn.link{display:flex;align-items:center;justify-content:center;text-decor
 .wrapseg{flex-wrap:wrap}
 .opt span{flex:1}
 .pc{margin-left:6px}
+/* 홈 — 과목 단추 → 부 → 주제(2026-11-12) */
+.srch{margin-left:auto;display:grid;place-items:center;width:44px;height:44px;border-radius:12px;font-size:26px;line-height:1;color:var(--text)}
+.home-toc{margin-top:8px}
+details.subj>summary.sj-h{align-items:center;min-height:58px}
+details.subj>summary.sj-h::after{content:"＋";margin-left:auto;color:var(--muted);font-weight:500;font-size:18px}
+details.subj[open]>summary.sj-h::after{content:"−"}
+.sj-b{margin-top:10px}
+a.topic,div.topic{display:flex;gap:10px;align-items:flex-start;min-height:48px;color:var(--text);text-decoration:none}
+.topic .tt{display:flex;align-items:flex-start;line-height:1.6;padding-top:1px;min-width:0}
+.topic .tx{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+a.topic .tt::after{content:"›";color:var(--muted);margin-left:auto;padding-left:10px;flex:none}
+.topic .wt{margin-left:auto;padding-left:10px;font-size:14px;color:var(--muted);flex:none}
+.topic .rk{display:inline-grid;place-items:center;flex:none;min-width:46px;height:26px;padding:0 7px;border-radius:7px;font-size:14px;font-weight:800;letter-spacing:.01em}

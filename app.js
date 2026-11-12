@@ -1,4 +1,4 @@
-// 나두 학습 — 잠금 해제 → 홈(검색·이어서 보기·지식 수준·과목 목차) · 교재 · 용어집 · 문제(객관식) · 듣기(음성) · 대표님 전용(학습 기록).
+// 나두 학습 — 잠금 해제 → 홈(과목 단추 → 부 → 주제 · 위 막대 돋보기 = 검색) · 교재 · 용어집 · 문제(객관식) · 듣기(음성) · 대표님 전용(학습 기록).
 // 내용은 data.enc.json(공유용) · data.admin.enc.json(전용)에만 암호문으로 있다. 저장 키는 모두 "ns_" 앞머리(같은 주소의 다른 앱과 섞이지 않게).
 // 외부 서버로 보내는 요청은 없다(같은 주소의 파일만 받는다).
 (() => {
@@ -144,7 +144,7 @@
     return `<nav class="nav" aria-label="주요 메뉴" style="grid-template-columns:repeat(${items.length},1fr)">${items.map(([k, h, i, t]) => `<a href="${h}" class="${k === on ? "on" : ""}"><i>${i}</i>${t}</a>`).join("")}</nav>`;
   };
   const testBar = () => D.test ? `<div class="testbar">시험 빌드 — 시험 비밀번호로 만든 판(배포되지 않음)</div>` : "";
-  const bar = (title, back) => testBar() + `<header class="top"><div class="in">${back ? `<a class="back" href="${back}" aria-label="뒤로">‹</a><div class="t">${escH(title)}</div>` : `<div class="brand">${APP}</div>`}</div></header>`;
+  const bar = (title, back) => testBar() + `<header class="top"><div class="in">${back ? `<a class="back" href="${back}" aria-label="뒤로">‹</a><div class="t">${escH(title)}</div>` : `<div class="brand">${APP}</div><a class="srch" href="#/search" aria-label="검색">⌕</a>`}</div></header>`;
 
   // ---- 확인 날짜: 폰에서 여는 날 기준으로 오래됐는지(빌드 날짜 기준이 아님)
   const DAY = 864e5;
@@ -167,62 +167,52 @@
     return {topics, know: kt.length ? kt.reduce((a, t) => a + t.know, 0) / kt.length : null, asked, all};
   }
   const pct = x => Math.round((x || 0) * 100);
-  function rateCard() {
+  function rateCard() {   // 지식 수준 카드 — 문제 화면 위(대표님 지시 2026-11-12: 홈에서 문제 쪽으로) · 누르면 주제별
     const m = mastery();
     if (!m.all) return "";
     const rows = m.topics.map(t => `<div class="rrow"><span class="t">${escH(t.code)} ${escH(t.title)}</span><span class="v">${t.know == null ? "—" : pct(t.know) + "%"}</span><div class="track"><i style="width:${pct(t.know)}%"></i></div><span class="muted small">푼 문항 ${t.asked}/${t.items.length}</span></div>`).join("");
-    return `<details class="card rate"><summary><div class="rrow top"><span class="t">지식 수준</span><span class="v big">${m.know == null ? "—" : pct(m.know) + "%"}</span><div class="track"><i style="width:${pct(m.know)}%"></i></div><span class="muted small">${m.know == null ? "문제를 풀면 여기에 나타납니다" : "푼 문항만 반영"} · 푼 문항 ${m.asked}/${m.all} · 누르면 주제별</span></div></summary>${rows}<a class="go" href="#/quiz">문제 풀기 ›</a></details>`;
+    return `<details class="card rate"><summary><div class="rrow top"><span class="t">지식 수준</span><span class="v big">${m.know == null ? "—" : pct(m.know) + "%"}</span><div class="track"><i style="width:${pct(m.know)}%"></i></div><span class="muted small">${m.know == null ? "문제를 풀면 여기에 나타납니다" : "푼 문항만 반영"} · 푼 문항 ${m.asked}/${m.all} · 누르면 주제별 · 약한 문항이 먼저 나옵니다</span></div></summary>${rows}</details>`;
   }
 
-  // ------------------------------------------------------------ 홈
-  function contCard() {
-    const last = T(ls.get(K.last, "")), first = D.topics.find(t => t.has_note);
-    const t = last && last.has_note ? last : first;
-    if (!t) return `<div class="card cont"><div class="eyebrow">이어서 보기</div><p class="muted">아직 쓴 교재가 없습니다.</p></div>`;
-    return `<a class="card cont" href="#/p/${t.id}"><div class="eyebrow">${last && last.has_note ? "이어서 보기" : "처음 시작"}</div><h2>${escH(t.code)} ${escH(t.title)}</h2>${t.summary ? `<p class="muted small">${escH(t.summary)}</p>` : ""}</a>`;
-  }
+
+  // ------------------------------------------------------------ 홈 — 과목 단추 → 부 → 주제(대표님 지시 2026-11-12: 첫 화면은 과목 단추만)
+  const OPEN = new Set();   // 펼친 과목·부(이번 실행 동안만 기억 — 앱을 새로 열면 과목 단추만)
+  let HOMEY = 0;   // 주제를 열 때의 홈 스크롤 위치 → 돌아오면 그 자리
   function home() {
     const subs = D.subjects.map(s => ({...s, parts: []}));
     for (const t of D.topics) {
       const s = subs.find(x => x.id === t.subj);
       let p = s.parts.find(x => x.name === t.part); if (!p) s.parts.push(p = {name: t.part, items: []}); p.items.push(t);
     }
-    const partsToc = parts => parts.map((p, i) => {
-      const open = p.items.some(t => t.has_note) || i === 0 ? " open" : "";
-      return `<details class="part"${open}><summary>${escH(p.name.replace(/^(\d)\s*/, "$1부 "))}<span class="pc">${p.items.filter(t => t.has_note).length}/${p.items.length}</span></summary>${p.items.map(t => {
-        const body = t.has_note
-          ? `<a class="sum" href="#/p/${t.id}">${t.summary ? `<p>${escH(t.summary)}</p>` : ""}${t.keys.length ? `<ul>${t.keys.map(h => `<li>${escH(h)}</li>`).join("")}</ul>` : ""}<p class="more">교재 열기 ›</p></a>`
-          : `<div class="sum"><p>${escH(t.point)}</p><p class="more">예정</p></div>`;
-        return `<details class="topic${t.has_note ? "" : " wait"}"><summary><span class="rk rk-${t.has_note ? "on" : "off"}">${escH(t.code)}</span><span class="tt"><span class="tx">${escH(t.title)}${stale(t) ? ' <span class="b b-warn">확인 오래됨</span>' : ""}</span></span></summary>${body}</details>`;
-      }).join("")}</details>`;
-    }).join("");
-    const subHead = s => {
-      const all = s.parts.flatMap(p => p.items), done = all.filter(t => t.has_note).length;
-      return `<span class="sj-n">과목</span><span class="sj-t">${escH(s.name)}</span><span class="sj-c">${done} / ${all.length}주제</span>`;
-    };
-    const toc = subs.length === 1
-      ? `<div class="subj one" data-subj="${subs[0].id}"><div class="sj-h">${subHead(subs[0])}</div>${subs[0].desc ? `<p class="sj-d">${escH(subs[0].desc)}</p>` : ""}${partsToc(subs[0].parts)}</div>`
-      : subs.map(s => `<details class="subj" data-subj="${s.id}"><summary class="sj-h">${subHead(s)}</summary>${s.desc ? `<p class="sj-d">${escH(s.desc)}</p>` : ""}${partsToc(s.parts)}</details>`).join("");
-    app.innerHTML = bar() + `<div class="wrap">${updTop()}
-      ${instH()}<div class="hello">한 주제씩,<br>아는 것을 쌓아갑니다.</div>
+    const op = k => OPEN.has(k) ? " open" : "";
+    const topic = t => t.has_note
+      ? `<a class="topic" href="#/p/${t.id}"><span class="rk rk-on">${escH(t.code)}</span><span class="tt"><span class="tx">${escH(t.title)}${stale(t) ? ' <span class="b b-warn">확인 오래됨</span>' : ""}</span></span></a>`
+      : `<div class="topic wait"><span class="rk rk-off">${escH(t.code)}</span><span class="tt"><span class="tx">${escH(t.title)}</span><span class="wt">예정</span></span></div>`;
+    const parts = s => s.parts.map(p => { const k = s.id + "|" + p.name;
+      return `<details class="part" data-k="${escH(k)}"${op(k)}><summary>${escH(p.name.replace(/^(\d)\s*/, "$1부 "))}</summary>${p.items.map(topic).join("")}</details>`; }).join("");
+    const toc = subs.map(s => `<details class="subj" data-subj="${s.id}" data-k="${escH(s.id)}"${op(s.id)}><summary class="sj-h"><span class="sj-t">${escH(s.name)}</span></summary><div class="sj-b">${parts(s)}</div></details>`).join("");
+    app.innerHTML = bar() + `<div class="wrap">${updTop()}${instH()}<div class="home-toc">${toc}</div></div>` + nav("home");
+    instBind();
+    app.querySelectorAll("details[data-k]").forEach(d => d.addEventListener("toggle", () => d.open ? OPEN.add(d.dataset.k) : OPEN.delete(d.dataset.k)));
+    app.querySelectorAll("a.topic").forEach(a => a.addEventListener("click", () => { HOMEY = window.scrollY; }));
+  }
+
+  // ------------------------------------------------------------ 검색(홈 위 막대의 돋보기 → 이 화면)
+  function searchPage() {
+    app.innerHTML = bar("검색", "#/") + `<div class="wrap">
       <div class="search"><input id="q" type="search" placeholder="용어·주제 검색 (예: 토큰)" aria-label="검색" enterkeyhint="search"><button class="x" id="qx" aria-label="지우기" hidden>×</button></div>
-      <div id="res"></div><div id="main">
-      ${contCard()}
-      ${rateCard()}
-      <h2 class="h-sec">과목</h2>${toc}
-      <div class="muted small meta-line">용어 ${D.stats.terms}개 · 교재 ${D.stats.notes}/${D.stats.topics}주제 · 문항 ${D.stats.items}개 · 정리 ${escH(D.built)}</div>
-      </div></div>` + nav("home");
+      <div id="res"></div></div>` + nav("home");
     const q = $("#q"), qx = $("#qx");
     const run = () => {
-      const v = q.value.trim(); qx.hidden = !v; $("#main").hidden = !!v;
+      const v = q.value.trim(); qx.hidden = !v;
       try { sessionStorage.setItem(NS + "q", v); } catch (e) {}
       if (!v) { $("#res").innerHTML = ""; return; }
       const hs = search(v);
       $("#res").innerHTML = `<div class="card res">${hs.length ? hs.map(h => `<a class="hit" ${h.pid ? `href="#/p/${h.pid}/${h.sid}"` : ""}><div class="w">${h.arc ? '<span class="arc">기록 · </span>' : ""}${escH(h.pt)} › ${escH(h.st.replace(/\s*\(.*$/, ""))}</div><div class="s">${snippet(h.raw, v)}</div></a>`).join("") : `<div class="empty">찾는 내용이 없습니다.</div>`}</div>`;
     };
-    instBind();
     q.oninput = run; qx.onclick = () => { q.value = ""; run(); q.focus(); };
     try { const s = sessionStorage.getItem(NS + "q"); if (s) { q.value = s; run(); } } catch (e) {}
+    if (!q.value) q.focus();
   }
 
   // ------------------------------------------------------------ 교재·용어집·기록
@@ -248,7 +238,7 @@
     const after = (hasQ ? `<a class="big-btn link" href="#/quiz/${pid}">이 주제 문제 풀기 (객관식 ${D.bank.find(b => b.id === pid).items.length}문항)</a>` : "")
       + (A && t && D.pages["rec-" + pid] ? `<a class="recnote" href="#/p/rec-${pid}">이 주제를 공부한 과정은 <b>기록</b>에 있습니다 ›</a>` : "");
     const on = pid === "glossary" ? "glossary" : pg.archive ? "archive" : "home";
-    app.innerHTML = bar(pg.title, pg.archive ? "#/archive" : "#/") + `<div class="wrap">${head}${chips ? `<div class="chips">${chips}</div>` : ""}${audH}<article class="doc">${pg.html}</article>${after}</div>` + nav(on);
+    app.innerHTML = bar(pg.title, pg.archive ? "#/archive" : BACK) + `<div class="wrap">${head}${chips ? `<div class="chips">${chips}</div>` : ""}${audH}<article class="doc">${pg.html}</article>${after}</div>` + nav(on);
     if (au) audBind(pid, pg.title, au);
     if (sid) {
       const el = document.getElementById(sid);
@@ -303,9 +293,8 @@
         body += `<div class="card done"><b>${QZ.qs.length}문항 중 ${ok}문항 맞음</b><div class="muted small">기록은 이 기기에만 남고 지식 수준에 반영됩니다.</div></div><button type="button" class="big-btn" id="qnew">다시 5문항</button>`;
       }
     } else body = `<button type="button" class="big-btn" id="qnew">5문항 시작</button>`;
-    const m = mastery();
     app.innerHTML = bar("문제", "#/") + `<div class="wrap">
-      <div class="muted small" style="margin:2px 2px 8px">지식 수준 ${m.know == null ? "—" : pct(m.know) + "%"} · 푼 문항 ${m.asked}/${m.all} · 약한 문항이 먼저 나옵니다</div>
+      ${rateCard()}
       <div class="seg wrapseg">${chips}</div>${body}</div>` + nav("quiz");
     saveDraft();
     document.querySelectorAll("[data-qsel]").forEach(b => b.onclick = () => { QZ = newSet(b.dataset.qsel); quiz(); window.scrollTo(0, 0); });
@@ -410,14 +399,17 @@
   window.__audio = AUD;   // 점검용(재생 길이 확인)
 
   // ------------------------------------------------------------ 길 찾기 · 시작 · 새 정리 반영
+  let BACK = "#/";   // 교재의 뒤로 = 들어온 곳(홈 또는 검색)
   function route() {
     const h = location.hash.replace(/^#\/?/, "").split("/");
     if (AUD.tid && !(h[0] === "p" && h[1] && decodeURIComponent(h[1]) === AUD.tid)) audStop();   // 듣던 주제 화면이 아니면 멈춤
     if (h[0] === "p" && h[1]) page(decodeURIComponent(h[1]), h[2] && decodeURIComponent(h[2]));
     else if (h[0] === "archive") { if (A) archive(); else location.hash = "#/"; }
+    else if (h[0] === "search") searchPage();
     else if (h[0] === "settings") settings();
     else if (h[0] === "quiz") quiz(h[1] && decodeURIComponent(h[1]));
-    else { home(); window.scrollTo(0, 0); }
+    else { home(); window.scrollTo(0, HOMEY); HOMEY = 0; }
+    if (h[0] !== "p") BACK = h[0] === "search" ? "#/search" : "#/";
   }
   function start() {
     buildIndex();
