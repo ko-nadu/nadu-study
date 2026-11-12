@@ -290,7 +290,7 @@ h3.sec{margin:18px 4px 8px;font-size:15px}
 .aud-r{display:flex;align-items:center;gap:8px;margin-top:6px}
 .aud-r input[type=range]{flex:1;min-width:0}
 .aud-r .ghost{flex:none;padding:6px 10px}
-.aud-r select{margin-left:auto;font:inherit;padding:4px 6px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--text)}
+.aud-r select{margin-left:auto;font:inherit;min-height:44px;padding:4px 8px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--text)}
 /* 과목 단계(2026-11-10) */
 .subj{margin:4px 0 14px}
 .subj .sj-h{display:flex;align-items:baseline;gap:8px;padding:12px 14px;background:var(--accent-soft);border:1px solid var(--line);border-radius:14px;list-style:none;cursor:default}
