@@ -1,6 +1,6 @@
 // 오프라인 캐시 — 데이터·앱 코드는 네트워크 우선(새 정리가 바로 보이게), 나머지는 캐시 우선.
 // ★같은 주소(출처)에 다른 앱이 함께 있으므로 이 앱 이름(nadu-study-)으로 시작하는 캐시만 만들고 지운다.
-const CACHE = "nadu-study-490bc999e4";
+const CACHE = "nadu-study-b49ce30e44";
 const SHELL = ["./", "index.html", "app.css", "app.js", "manifest.json", "icon-180.png", "icon-192.png", "icon-512.png", "data.enc.json"];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
