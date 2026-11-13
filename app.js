@@ -1,4 +1,4 @@
-// 나두 학습 — 잠금 해제 → 홈(과목 단추 → 부 → 주제 · 위 막대 돋보기 = 검색) · 교재 · 용어집 · 문제(객관식) · 듣기(음성) · 대표님 전용(학습 기록).
+// 나두 학습 — 잠금 해제 → 홈(맨 위 고정 검색창 · 과목 단추 → 부 → 주제) · 교재 · 용어집 · 문제(객관식) · 듣기(음성) · 대표님 전용(학습 기록).
 // 내용은 data.enc.json(공유용) · data.admin.enc.json(전용)에만 암호문으로 있다. 저장 키는 모두 "ns_" 앞머리(같은 주소의 다른 앱과 섞이지 않게).
 // 외부 서버로 보내는 요청은 없다(같은 주소의 파일만 받는다).
 (() => {
@@ -119,12 +119,12 @@
     for (const t of D.topics) if (!t.has_note)
       IDX.push({pid: "", sid: "", arc: false, pt: subjName(t.subj) + " · " + t.part.replace(/^(\d)\s*/, "$1부 "), st: `${t.code} ${t.title} (예정)`, raw: t.title + " " + t.point, n: norm(t.title + " " + t.point)});
   }
-  function search(q) {
+  function search(q, pid) {   // pid 를 주면 그 교재 안에서만(대표님 지시 2026-11-13)
     const terms = norm(q).split(" ").filter(Boolean);
     if (!terms.length) return [];
     const qn = terms.join(" ");
     const sc = e => (norm(e.st).startsWith(qn) ? 4 : 0) + (norm(e.st).includes(qn) ? 2 : 0) + (e.pid === "glossary" ? 1 : 0) + (e.arc ? -3 : 0);
-    return IDX.filter(e => terms.every(t => e.n.includes(t))).sort((a, b) => sc(b) - sc(a)).slice(0, 40);
+    return IDX.filter(e => (!pid || e.pid === pid) && terms.every(t => e.n.includes(t))).sort((a, b) => sc(b) - sc(a)).slice(0, pid ? 60 : 40);
   }
   function snippet(raw, q) {
     const t = raw.replace(/\s+/g, " ");
@@ -144,7 +144,15 @@
     return `<nav class="nav" aria-label="주요 메뉴" style="grid-template-columns:repeat(${items.length},1fr)">${items.map(([k, h, i, t]) => `<a href="${h}" class="${k === on ? "on" : ""}"><i>${i}</i>${t}</a>`).join("")}</nav>`;
   };
   const testBar = () => D.test ? `<div class="testbar">시험 빌드 — 시험 비밀번호로 만든 판(배포되지 않음)</div>` : "";
-  const bar = (title, back) => testBar() + `<header class="top"><div class="in">${back ? `<a class="back" href="${back}" aria-label="뒤로">‹</a><div class="t">${escH(title)}</div>` : `<div class="brand">${APP}</div><a class="srch" href="#/search" aria-label="검색">⌕</a>`}</div></header>`;
+  const srchRow = ph => `<div class="in hs"><div class="search"><input id="q" type="search" placeholder="${ph}" aria-label="검색" enterkeyhint="search"><button type="button" class="x" id="qx" aria-label="지우기" hidden>×</button></div></div>`;
+  // 위 막대 — 홈과 교재 화면은 검색창이 늘 붙어 있음(ph = 교재 화면 검색창 안내 글)
+  const bar = (title, back, ph) => testBar() + `<header class="top"><div class="in">${back ? `<a class="back" href="${back}" aria-label="뒤로">‹</a><div class="t">${escH(title)}</div>` : `<div class="brand">${APP}</div>`}</div>${!back ? srchRow("용어·주제 검색 (예: 토큰)") : ph ? srchRow(ph) : ""}</header>`;
+  const goSec = sid => {   // 절로 이동 — 위 막대(검색창 포함) 높이만큼 내려서
+    const el = sid && document.getElementById(sid); if (!el) return;
+    const box = el.closest("section.cs,tr") || el, bar = ($(".top") || {}).offsetHeight || 64;
+    window.scrollTo({top: Math.max(0, box.getBoundingClientRect().top + window.scrollY - bar - 8), behavior: "instant"});   // 부드러운 스크롤이 겹치면 도중에 멈춰서 바로 이동
+    box.classList.add("flash");
+  };
 
   // ---- 확인 날짜: 폰에서 여는 날 기준으로 오래됐는지(빌드 날짜 기준이 아님)
   const DAY = 864e5;
@@ -191,28 +199,39 @@
     const parts = s => s.parts.map(p => { const k = s.id + "|" + p.name;
       return `<details class="part" data-k="${escH(k)}"${op(k)}><summary>${escH(p.name.replace(/^(\d)\s*/, "$1부 "))}</summary>${p.items.map(topic).join("")}</details>`; }).join("");
     const toc = subs.map(s => `<details class="subj" data-subj="${s.id}" data-k="${escH(s.id)}"${op(s.id)}><summary class="sj-h"><span class="sj-t">${escH(s.name)}</span></summary><div class="sj-b">${parts(s)}</div></details>`).join("");
-    app.innerHTML = bar() + `<div class="wrap">${updTop()}${instH()}<div class="home-toc">${toc}</div></div>` + nav("home");
-    instBind();
+    app.innerHTML = bar() + `<div class="wrap">${updTop()}${instH()}<div id="res"></div><div class="home-toc">${toc}</div></div>` + nav("home");
+    instBind(); homeSearch();
     app.querySelectorAll("details[data-k]").forEach(d => d.addEventListener("toggle", () => d.open ? OPEN.add(d.dataset.k) : OPEN.delete(d.dataset.k)));
     app.querySelectorAll("a.topic").forEach(a => a.addEventListener("click", () => { HOMEY = window.scrollY; }));
   }
 
-  // ------------------------------------------------------------ 검색(홈 위 막대의 돋보기 → 이 화면)
-  function searchPage() {
-    app.innerHTML = bar("검색", "#/") + `<div class="wrap">
-      <div class="search"><input id="q" type="search" placeholder="용어·주제 검색 (예: 토큰)" aria-label="검색" enterkeyhint="search"><button class="x" id="qx" aria-label="지우기" hidden>×</button></div>
-      <div id="res"></div></div>` + nav("home");
-    const q = $("#q"), qx = $("#qx");
+  // ------------------------------------------------------------ 검색(홈 맨 위 고정 검색창)
+  function homeSearch() {   // 홈 맨 위 고정 검색창(대표님 지시 2026-11-13) — 치면 목차 대신 결과
+    const q = $("#q"), qx = $("#qx"), res = $("#res"), toc = app.querySelector(".home-toc");
     const run = () => {
-      const v = q.value.trim(); qx.hidden = !v;
+      const v = q.value.trim(); qx.hidden = !v; toc.style.display = v ? "none" : "";
       try { sessionStorage.setItem(NS + "q", v); } catch (e) {}
-      if (!v) { $("#res").innerHTML = ""; return; }
+      if (!v) { res.innerHTML = ""; return; }
       const hs = search(v);
-      $("#res").innerHTML = `<div class="card res">${hs.length ? hs.map(h => `<a class="hit" ${h.pid ? `href="#/p/${h.pid}/${h.sid}"` : ""}><div class="w">${h.arc ? '<span class="arc">기록 · </span>' : ""}${escH(h.pt)} › ${escH(h.st.replace(/\s*\(.*$/, ""))}</div><div class="s">${snippet(h.raw, v)}</div></a>`).join("") : `<div class="empty">찾는 내용이 없습니다.</div>`}</div>`;
+      res.innerHTML = `<div class="card res">${hs.length ? hs.map(h => `<a class="hit" ${h.pid ? `href="#/p/${h.pid}/${h.sid}"` : ""}><div class="w">${h.arc ? '<span class="arc">기록 · </span>' : ""}${escH(h.pt)} › ${escH(h.st.replace(/\s*\(.*$/, ""))}</div><div class="s">${snippet(h.raw, v)}</div></a>`).join("") : `<div class="empty">찾는 내용이 없습니다.</div>`}</div>`;
+      res.querySelectorAll("a.hit").forEach(a => a.addEventListener("click", () => { HOMEY = window.scrollY; }));
     };
     q.oninput = run; qx.onclick = () => { q.value = ""; run(); q.focus(); };
-    try { const s = sessionStorage.getItem(NS + "q"); if (s) { q.value = s; run(); } } catch (e) {}
-    if (!q.value) q.focus();
+    q.addEventListener("keydown", e => { if (e.key === "Enter") q.blur(); });
+    try { const v = sessionStorage.getItem(NS + "q"); if (v) { q.value = v; run(); } } catch (e) {}
+  }
+
+  function pageSearch(pid) {   // 교재 화면 검색창 — 지금 연 교재 안에서만 · 결과를 누르면 그 절로
+    const q = $("#q"), qx = $("#qx"), res = $("#res"), bd = $("#pbody");
+    const run = () => {
+      const v = q.value.trim(); qx.hidden = !v; bd.style.display = v ? "none" : "";
+      if (!v) { res.innerHTML = ""; return; }
+      const hs = search(v, pid);
+      res.innerHTML = `<div class="card res">${hs.length ? hs.map(h => `<a class="hit" href="#" data-sid="${h.sid}"><div class="w">${escH(h.st.replace(/\s*\(.*$/, ""))}</div><div class="s">${snippet(h.raw, v)}</div></a>`).join("") : `<div class="empty">${pid === "glossary" ? "용어집" : (D.pages[pid] || {}).archive ? "이 기록" : "이 교재"}에는 찾는 내용이 없습니다.</div>`}</div>`;
+      res.querySelectorAll("a.hit").forEach(a => a.addEventListener("click", e => { e.preventDefault(); q.value = ""; run(); goSec(a.dataset.sid); }));
+    };
+    q.oninput = run; qx.onclick = () => { q.value = ""; run(); q.focus(); };
+    q.addEventListener("keydown", e => { if (e.key === "Enter") q.blur(); });
   }
 
   // ------------------------------------------------------------ 교재·용어집·기록
@@ -221,16 +240,11 @@
     if (!pg || (pg.archive && !A)) { location.hash = "#/"; return; }
     const t = T(pid);
     if (t) ls.set(K.last, pid);
-    const chips = pid !== "glossary" ? pg.secs.filter(s => s.level === 2).map(s => `<a href="#/p/${pid}/${s.id}">${escH(s.title.replace(/\s*\(.*$/, ""))}</a>`).join("") : "";
-    let head = "";
-    if (t && t.checked) {
-      const age = ageDays(t.checked);
-      head = stale(t)
-        ? `<div class="stale"><b>확인한 지 오래됨</b> — 마지막 확인 ${escH(t.checked)}(${age}일 전). 도구 기능·이름·가격은 그사이 바뀌었을 수 있습니다.</div>`
-        : `<div class="muted small checked">마지막 확인 ${escH(t.checked)}</div>`;
-    }
+    // 학습에 쓰는 것만 남김(대표님 지시 2026-11-13): 절 바로가기 단추·「마지막 확인」 줄·듣기 머리 문구·본문 큰 제목(위 막대와 같은 말) 뺌 — 오래된 확인 경고는 남김
+    const head = t && stale(t) ? `<div class="stale"><b>확인한 지 오래됨</b> — 마지막 확인 ${escH(t.checked)}(${ageDays(t.checked)}일 전). 도구 기능·이름·가격은 그사이 바뀌었을 수 있습니다.</div>` : "";
+    const body = pg.html.replace(/<h1 id="([^"]+)">[\s\S]*?<\/h1>/, '<span id="$1"></span>');
     const au = t && D.audio && D.audio[pid];
-    const audH = au ? `<div class="card aud"><div><b>🎧 듣기</b> <span class="muted small">두 진행자 대화 · 약 ${Math.round(au.dur / 60)}분 · 화면을 꺼도 이어집니다</span></div>
+    const audH = au ? `<div class="card aud">
       <button type="button" class="big-btn" id="aplay">${AUD.tid === pid && !AUD.el.paused ? "❚❚ 일시정지" : "▶ 듣기"}</button>
       <div class="aud-r"><button type="button" class="ghost" data-sk="-10">« 10초</button><input type="range" id="aseek" min="0" max="${au.dur}" value="0" aria-label="재생 위치"><button type="button" class="ghost" data-sk="10">10초 »</button></div>
       <div class="aud-r"><span class="muted small" id="atime">0:00 / ${fmtT(au.dur)}</span><select id="arate" aria-label="속도">${[0.8, 1, 1.25, 1.5].map(r => `<option value="${r}"${(+ls.get(K.rate, "1")) === r ? " selected" : ""}>${r}배</option>`).join("")}</select></div></div>` : "";
@@ -238,12 +252,10 @@
     const after = (hasQ ? `<a class="big-btn link" href="#/quiz/${pid}">이 주제 문제 풀기 (객관식 ${D.bank.find(b => b.id === pid).items.length}문항)</a>` : "")
       + (A && t && D.pages["rec-" + pid] ? `<a class="recnote" href="#/p/rec-${pid}">이 주제를 공부한 과정은 <b>기록</b>에 있습니다 ›</a>` : "");
     const on = pid === "glossary" ? "glossary" : pg.archive ? "archive" : "home";
-    app.innerHTML = bar(pg.title, pg.archive ? "#/archive" : BACK) + `<div class="wrap">${head}${chips ? `<div class="chips">${chips}</div>` : ""}${audH}<article class="doc">${pg.html}</article>${after}</div>` + nav(on);
+    app.innerHTML = bar(pg.title, pg.archive ? "#/archive" : BACK, pid === "glossary" ? "용어집에서 검색" : pg.archive ? "이 기록에서 검색" : "이 교재에서 검색") + `<div class="wrap"><div id="res"></div><div id="pbody">${head}${audH}<article class="doc">${body}</article>${after}</div></div>` + nav(on);
+    pageSearch(pid);
     if (au) audBind(pid, pg.title, au);
-    if (sid) {
-      const el = document.getElementById(sid);
-      if (el) { const box = el.closest("section.cs,tr") || el; box.scrollIntoView({block: "start"}); window.scrollBy(0, -64); box.classList.add("flash"); }
-    } else window.scrollTo(0, 0);
+    if (sid) goSec(sid); else window.scrollTo(0, 0);
   }
   function archive() {
     const recs = Object.entries(D.pages).filter(([k, v]) => v.archive).map(([k, v]) => `<a class="item" href="#/p/${k}"><span class="ic">기</span><span>${escH(v.title)}<small>조사 과정 · 질문과 의견</small></span></a>`).join("");
@@ -399,17 +411,17 @@
   window.__audio = AUD;   // 점검용(재생 길이 확인)
 
   // ------------------------------------------------------------ 길 찾기 · 시작 · 새 정리 반영
-  let BACK = "#/";   // 교재의 뒤로 = 들어온 곳(홈 또는 검색)
+  let BACK = "#/";   // 교재의 뒤로 = 홈(검색 결과에서 왔으면 검색어가 남아 결과가 다시 보임)
   function route() {
     const h = location.hash.replace(/^#\/?/, "").split("/");
     if (AUD.tid && !(h[0] === "p" && h[1] && decodeURIComponent(h[1]) === AUD.tid)) audStop();   // 듣던 주제 화면이 아니면 멈춤
     if (h[0] === "p" && h[1]) page(decodeURIComponent(h[1]), h[2] && decodeURIComponent(h[2]));
     else if (h[0] === "archive") { if (A) archive(); else location.hash = "#/"; }
-    else if (h[0] === "search") searchPage();
+    else if (h[0] === "search") location.replace("#/");   // 옛 검색 화면 주소 → 홈(검색창이 홈 맨 위로 옮겨 감)
     else if (h[0] === "settings") settings();
     else if (h[0] === "quiz") quiz(h[1] && decodeURIComponent(h[1]));
     else { home(); window.scrollTo(0, HOMEY); HOMEY = 0; }
-    if (h[0] !== "p") BACK = h[0] === "search" ? "#/search" : "#/";
+    if (h[0] !== "p") BACK = "#/";
   }
   function start() {
     buildIndex();

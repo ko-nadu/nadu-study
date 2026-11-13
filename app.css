@@ -23,7 +23,7 @@
 :root[data-theme="light"]{color-scheme:light}
 :root[data-theme="dark"]{color-scheme:dark}
 *{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+html{-webkit-text-size-adjust:100%}   /* 전역 부드러운 스크롤 없음 — 화면 바뀔 때 미끄러지지 않게 · 맨 위로 단추만 부드럽게 */
 body{margin:0;background:var(--bg);color:var(--text);
   font:16px/1.68 system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;
   word-break:keep-all;overflow-wrap:anywhere;overflow-x:hidden}
@@ -48,7 +48,10 @@ button,input{font:inherit}
 .search input{width:100%;min-height:50px;border:1px solid var(--line);border-radius:14px;background:var(--card);
   color:var(--text);padding:0 46px 0 16px;outline:none;font-size:16px}
 .search input:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 20%,transparent)}
+.search input::-webkit-search-cancel-button{-webkit-appearance:none;display:none}   /* 브라우저 기본 × 숨김 — 앱의 × 하나만 */
 .search .x{position:absolute;right:3px;top:3px;width:44px;height:44px;border:0;background:none;font-size:22px;color:var(--muted)}
+.top .in.hs{min-height:0;padding:0 12px 10px}   /* 홈 맨 위 고정 검색창 */
+.top .hs .search{flex:1;margin:0}
 .prog .row{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
 .prog .row b{font-size:17px}
 .track{height:9px;border-radius:99px;background:var(--line);overflow:hidden;margin:10px 0 8px}
@@ -89,10 +92,6 @@ a.sess b{font-size:15px}
 a.sess .c{grid-column:1/-1;color:var(--muted);font-size:14.5px;line-height:1.5}
 
 /* 노트(카드 구획) */
-.chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 12px;scrollbar-width:none}
-.chips::-webkit-scrollbar{display:none}
-.chips a{flex:none;min-height:44px;display:inline-flex;align-items:center;padding:0 14px;border-radius:12px;background:var(--card);
-  border:1px solid color-mix(in srgb,var(--accent) 45%,var(--line));color:var(--accent);font-size:14.5px;font-weight:700;white-space:nowrap}
 .doc section.cs{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:4px 16px 12px;margin-bottom:12px;scroll-margin-top:70px}
 .doc section.cs-lead{background:transparent;border:0;padding:0 2px}
 .doc h1{font-size:23px;line-height:1.38;letter-spacing:-.03em;margin:8px 0 10px}
@@ -283,7 +282,7 @@ details.topic>.sum .more{color:var(--muted);font-size:14px}
 h3.sec{margin:18px 4px 8px;font-size:15px}
 
 /* 주제 음성 듣기(공유용 · 2026-11-11) */
-.aud .big-btn{margin:10px 0 6px}
+.aud .big-btn{margin:0 0 6px}
 /* 폰에 설치하기 카드(홈 맨 위 · 2026-11-11) */
 .inst{padding:10px}.inst-r{display:flex;gap:8px;align-items:center}.inst-r .big-btn{flex:1;margin:0}
 .inst-x{width:50px;min-height:50px;margin:0;padding:0;font-size:22px}.inst-g{margin:10px 2px 2px;line-height:1.55}
@@ -307,7 +306,6 @@ figure.fig.ai{position:relative}
 /* 나눠 쓴 부분(2026-11-10): 시험 빌드 띠 · 확인 날짜 · 문제 결과 · 근거 링크 */
 .testbar{background:#a13636;color:#fff;text-align:center;font-size:14px;font-weight:800;padding:6px 10px}
 .stale{margin:2px 0 12px;padding:10px 14px;border-radius:12px;border:1px solid var(--hot-line);background:var(--hot);font-size:16px;line-height:1.6}
-.checked{margin:0 4px 10px}
 a.big-btn.link{display:flex;align-items:center;justify-content:center;text-decoration:none;color:#fff;margin-top:14px}
 :root[data-theme="dark"] .big-btn,:root[data-theme="dark"] a.big-btn.link{color:#06201c}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .big-btn,:root:not([data-theme="light"]) a.big-btn.link{color:#06201c}}
@@ -318,7 +316,6 @@ a.big-btn.link{display:flex;align-items:center;justify-content:center;text-decor
 .opt span{flex:1}
 .pc{margin-left:6px}
 /* 홈 — 과목 단추 → 부 → 주제(2026-11-12) */
-.srch{margin-left:auto;display:grid;place-items:center;width:44px;height:44px;border-radius:12px;font-size:26px;line-height:1;color:var(--text)}
 .home-toc{margin-top:8px}
 details.subj>summary.sj-h{align-items:center;min-height:58px}
 details.subj>summary.sj-h::after{content:"＋";margin-left:auto;color:var(--muted);font-weight:500;font-size:18px}
