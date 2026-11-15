@@ -6,6 +6,25 @@
   const K = {key: NS + "key", theme: NS + "theme", inst: NS + "inst_home", akey: NS + "admin_key", qlog: NS + "quiz_log",
              qdraft: NS + "quiz_draft", last: NS + "last", rate: NS + "aud_rate", pos: NS + "aud_pos_", upd: NS + "upd"};
   const $ = s => document.querySelector(s);
+  // ---- 아이콘 한 벌(2026-11-15 · 24px 틀 · 선 굵기 1.75 · 끝 둥글게 · 앱 안에 직접 넣음 — 외부 파일·글꼴 없음)
+  const IC = {
+    home: '<path d="M3.5 10.5 12 3.5l8.5 7"/><path d="M5.5 9v10.5a1 1 0 0 0 1 1H10v-6h4v6h3.5a1 1 0 0 0 1-1V9"/>',
+    book: '<path d="M5 19V5.5A2.5 2.5 0 0 1 7.5 3H19v14H7.5A2.5 2.5 0 0 0 5 19.5 1.5 1.5 0 0 0 6.5 21H19"/><path d="M9 7.5h6"/>',
+    quiz: '<rect x="5" y="4" width="14" height="17" rx="2.5"/><path d="M9.5 4V3h5v1"/><path d="m9 13 2 2 4-4.5"/>',
+    archive: '<rect x="3.5" y="4" width="17" height="4.5" rx="1.2"/><path d="M5.5 8.5V19a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V8.5"/><path d="M10 12.5h4"/>',
+    settings: '<path d="M4 7h9M17 7h3M4 12h3M11 12h9M4 17h11M19 17h1"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="17" r="2"/>',
+    back: '<path d="m14.5 18-6-6 6-6"/>',
+    next: '<path d="m9.5 18 6-6-6-6"/>',
+    x: '<path d="M17.5 6.5l-11 11M6.5 6.5l11 11"/>',
+    up: '<path d="M12 19V5M5.5 11.5 12 5l6.5 6.5"/>',
+    play: '<path d="M8 5.2v13.6a.8.8 0 0 0 1.2.7l10.6-6.8a.8.8 0 0 0 0-1.4L9.2 4.5A.8.8 0 0 0 8 5.2z" fill="currentColor"/>',
+    pause: '<rect x="6.5" y="5" width="3.5" height="14" rx="1" fill="currentColor"/><rect x="14" y="5" width="3.5" height="14" rx="1" fill="currentColor"/>',
+    rew: '<path d="M4 12a8 8 0 1 0 2.4-5.7L4 8.6"/><path d="M4 4v4.6h4.6"/>',
+    fwd: '<path d="M20 12a8 8 0 1 1-2.4-5.7L20 8.6"/><path d="M20 4v4.6h-4.6"/>',
+    theme: '<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/>',
+    refresh: '<path d="M20 12a8 8 0 1 1-2.4-5.7L20 8.6"/><path d="M20 4v4.6h-4.6"/>'
+  };
+  const ic = (n, z) => `<svg class="ic" viewBox="0 0 24 24" width="${z || 24}" height="${z || 24}" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]}</svg>`;
   const app = $("#app");
   let D = null, A = null, IDX = [], BIP = null, CT = "", ACT = "";
   const ls = {
@@ -17,16 +36,16 @@
   const fetchAdm = async () => { const r = await fetch("data.admin.enc.json?t=" + Date.now(), {cache: "no-store"}); return r.ok ? r.json() : null; };
 
   // ---- 화면 모드: 자동(폰 설정) → 라이트 → 다크 · 기기에 기억
-  const TH = ["auto", "light", "dark"], THL = {auto: "◐ 자동", light: "☀ 라이트", dark: "☾ 다크"};
+  const TH = ["auto", "light", "dark"], THL = {auto: "자동", light: "라이트", dark: "다크"};
   const getTh = () => ls.get(K.theme, "auto");
   function setTh(t) {
     t === "auto" ? ls.del(K.theme) : ls.set(K.theme, t);
     t === "auto" ? document.documentElement.removeAttribute("data-theme") : document.documentElement.setAttribute("data-theme", t);
-    document.querySelectorAll(".tbtn").forEach(b => { b.textContent = THL[t]; b.setAttribute("aria-label", "화면 모드: " + THL[t].slice(2)); });
+    document.querySelectorAll(".tbtn").forEach(b => { b.innerHTML = ic("theme", 18) + THL[t]; b.setAttribute("aria-label", "화면 모드: " + THL[t]); });
     const dark = t === "dark" || (t === "auto" && matchMedia("(prefers-color-scheme: dark)").matches);
     const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", dark ? "#10151d" : "#f7f9f8");
   }
-  const tbtn = () => `<button class="tbtn" type="button" data-th aria-label="화면 모드">${THL[getTh()]}</button>`;
+  const tbtn = () => `<button class="tbtn" type="button" data-th aria-label="화면 모드">${ic("theme", 18)}${THL[getTh()]}</button>`;
   document.addEventListener("click", e => { if (e.target.closest("#updtop")) applyUpd(); });
   document.addEventListener("click", e => { if (e.target.closest("[data-th]")) { const c = getTh(); setTh(TH[(TH.indexOf(c) + 1) % 3]); } });
 
@@ -34,7 +53,7 @@
   //   (2026-11-11 대표님 「처음 접속시에만 홈 화면 위에 폰에 설치하기 단추」 — 오른쪽 위 작은 팝업은 없앰)
   const standalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
   const instOff = () => standalone() || ls.get(K.inst, "") === "off";
-  const instH = () => instOff() ? "" : `<div class="card inst" id="inst"><div class="inst-r"><button type="button" class="big-btn" id="instgo">폰에 설치하기</button><button type="button" class="ghost inst-x" id="instx" aria-label="설치 안내 닫기">×</button></div><div class="inst-g small" id="instg" hidden></div></div>`;
+  const instH = () => instOff() ? "" : `<div class="card inst" id="inst"><div class="inst-r"><button type="button" class="big-btn" id="instgo">폰에 설치하기</button><button type="button" class="ghost inst-x" id="instx" aria-label="설치 안내 닫기">${ic("x")}</button></div><div class="inst-g small" id="instg" hidden></div></div>`;
   function instGuide() {
     const ua = navigator.userAgent;
     if (/KAKAOTALK|NAVER\(|Instagram|FBAN|FBAV|Line\//i.test(ua)) return "앱 안 브라우저라 설치가 안 됩니다. 오른쪽 위 메뉴의 <b>다른 브라우저로 열기</b>(크롬·사파리) 뒤 다시 눌러 주세요.";
@@ -138,15 +157,15 @@
 
   // ------------------------------------------------------------ 공통 틀
   const nav = on => {
-    const items = [["home", "#/", "⌂", "홈"], ["glossary", "#/p/glossary", "가", "용어집"], ["quiz", "#/quiz", "✎", "문제"]];
-    if (A) items.push(["archive", "#/archive", "▤", "기록"]);
-    items.push(["settings", "#/settings", "⚙", "설정"]);
-    return `<nav class="nav" aria-label="주요 메뉴" style="grid-template-columns:repeat(${items.length},1fr)">${items.map(([k, h, i, t]) => `<a href="${h}" class="${k === on ? "on" : ""}"><i>${i}</i>${t}</a>`).join("")}</nav>`;
+    const items = [["home", "#/", "home", "홈"], ["glossary", "#/p/glossary", "book", "용어집"], ["quiz", "#/quiz", "quiz", "문제"]];
+    if (A) items.push(["archive", "#/archive", "archive", "기록"]);
+    items.push(["settings", "#/settings", "settings", "설정"]);
+    return `<nav class="nav" aria-label="주요 메뉴" style="grid-template-columns:repeat(${items.length},1fr)">${items.map(([k, h, i, t]) => `<a href="${h}" class="${k === on ? "on" : ""}"${k === on ? ' aria-current="page"' : ""}>${ic(i)}<span>${t}</span></a>`).join("")}</nav>`;
   };
   const testBar = () => D.test ? `<div class="testbar">시험 빌드 — 시험 비밀번호로 만든 판(배포되지 않음)</div>` : "";
-  const srchRow = ph => `<div class="in hs"><div class="search"><input id="q" type="search" placeholder="${ph}" aria-label="검색" enterkeyhint="search"><button type="button" class="x" id="qx" aria-label="지우기" hidden>×</button></div></div>`;
+  const srchRow = ph => `<div class="in hs"><div class="search"><input id="q" type="search" placeholder="${ph}" aria-label="검색" enterkeyhint="search"><button type="button" class="x" id="qx" aria-label="지우기" hidden>${ic("x", 20)}</button></div></div>`;
   // 위 막대 — 홈과 교재 화면은 검색창이 늘 붙어 있음(ph = 교재 화면 검색창 안내 글)
-  const bar = (title, back, ph) => testBar() + `<header class="top"><div class="in">${back ? `<a class="back" href="${back}" aria-label="뒤로">‹</a><div class="t">${escH(title)}</div>` : `<div class="brand">${APP}</div>`}</div>${!back ? srchRow("용어·주제 검색 (예: 토큰)") : ph ? srchRow(ph) : ""}</header>`;
+  const bar = (title, back, ph) => testBar() + `<header class="top"><div class="in">${back ? `<a class="back" href="${back}" aria-label="뒤로">${ic("back", 26)}</a>` : ""}${title ? `<div class="t${back ? "" : " root"}">${escH(title)}</div>` : `<div class="brand">${APP}</div>`}</div>${!title ? srchRow("용어·주제 검색 (예: 토큰)") : ph ? srchRow(ph) : ""}</header>`;
   const goSec = sid => {   // 절로 이동 — 위 막대(검색창 포함) 높이만큼 내려서
     const el = sid && document.getElementById(sid); if (!el) return;
     const box = el.closest("section.cs,tr") || el, bar = ($(".top") || {}).offsetHeight || 64;
@@ -175,12 +194,6 @@
     return {topics, know: kt.length ? kt.reduce((a, t) => a + t.know, 0) / kt.length : null, asked, all};
   }
   const pct = x => Math.round((x || 0) * 100);
-  function rateCard() {   // 지식 수준 카드 — 문제 화면 위(대표님 지시 2026-11-12: 홈에서 문제 쪽으로) · 누르면 주제별
-    const m = mastery();
-    if (!m.all) return "";
-    const rows = m.topics.map(t => `<div class="rrow"><span class="t">${escH(t.code)} ${escH(t.title)}</span><span class="v">${t.know == null ? "—" : pct(t.know) + "%"}</span><div class="track"><i style="width:${pct(t.know)}%"></i></div><span class="muted small">푼 문항 ${t.asked}/${t.items.length}</span></div>`).join("");
-    return `<details class="card rate"><summary><div class="rrow top"><span class="t">지식 수준</span><span class="v big">${m.know == null ? "—" : pct(m.know) + "%"}</span><div class="track"><i style="width:${pct(m.know)}%"></i></div><span class="muted small">${m.know == null ? "문제를 풀면 여기에 나타납니다" : "푼 문항만 반영"} · 푼 문항 ${m.asked}/${m.all} · 누르면 주제별 · 약한 문항이 먼저 나옵니다</span></div></summary>${rows}</details>`;
-  }
 
 
   // ------------------------------------------------------------ 홈 — 과목 단추 → 부 → 주제(대표님 지시 2026-11-12: 첫 화면은 과목 단추만)
@@ -245,8 +258,8 @@
     const body = pg.html.replace(/<h1 id="([^"]+)">[\s\S]*?<\/h1>/, '<span id="$1"></span>');
     const au = t && D.audio && D.audio[pid];
     const audH = au ? `<div class="card aud">
-      <button type="button" class="big-btn" id="aplay">${AUD.tid === pid && !AUD.el.paused ? "❚❚ 일시정지" : "▶ 듣기"}</button>
-      <div class="aud-r"><button type="button" class="ghost" data-sk="-10">« 10초</button><input type="range" id="aseek" min="0" max="${au.dur}" value="0" aria-label="재생 위치"><button type="button" class="ghost" data-sk="10">10초 »</button></div>
+      <button type="button" class="big-btn" id="aplay">${AUD.tid === pid && !AUD.el.paused ? ic("pause", 22) + "일시정지" : ic("play", 22) + "듣기"}</button>
+      <div class="aud-r"><button type="button" class="ghost" data-sk="-10" aria-label="10초 뒤로">${ic("rew", 20)}10초</button><input type="range" id="aseek" min="0" max="${au.dur}" value="0" aria-label="재생 위치"><button type="button" class="ghost" data-sk="10" aria-label="10초 앞으로">10초${ic("fwd", 20)}</button></div>
       <div class="aud-r"><span class="muted small" id="atime">0:00 / ${fmtT(au.dur)}</span><select id="arate" aria-label="속도">${[0.8, 1, 1.25, 1.5].map(r => `<option value="${r}"${(+ls.get(K.rate, "1")) === r ? " selected" : ""}>${r}배</option>`).join("")}</select></div></div>` : "";
     const hasQ = t && D.bank.some(b => b.id === pid);
     const after = (hasQ ? `<a class="big-btn link" href="#/quiz/${pid}">이 주제 문제 풀기 (객관식 ${D.bank.find(b => b.id === pid).items.length}문항)</a>` : "")
@@ -259,76 +272,139 @@
   }
   function archive() {
     const recs = Object.entries(D.pages).filter(([k, v]) => v.archive).map(([k, v]) => `<a class="item" href="#/p/${k}"><span class="ic">기</span><span>${escH(v.title)}<small>조사 과정 · 질문과 의견</small></span></a>`).join("");
-    app.innerHTML = bar("기록", "#/") + `<div class="wrap"><p class="muted small" style="margin:4px 2px 12px">주제를 공부한 과정입니다(대표님 전용). 복습은 홈의 교재로 하세요.</p>
+    app.innerHTML = bar("기록") + `<div class="wrap"><p class="muted small" style="margin:4px 2px 12px">주제를 공부한 과정입니다(대표님 전용). 복습은 홈의 교재로 하세요.</p>
       <div class="card" style="padding:0">${recs || '<div class="empty">아직 없습니다.</div>'}</div></div>` + nav("archive");
     window.scrollTo(0, 0);
   }
 
-  // ------------------------------------------------------------ 문제 풀이(객관식) — 고르면 바로 맞음/틀림 · 기록은 이 기기에만
+  // ------------------------------------------------------------ 문제 풀이(객관식) — ① 고르기 → ② 문제만(한 화면에 한 문제) → ③ 결과(정답·풀이 함께) · 기록은 이 기기에만
+  //   대표님 지시 2026-11-15: 「문제로 들어가면 우선 선택하고, 선택이 끝나면 문제들만 보여지게 해. 그래서 다 풀고 나면 결과에 대해서 정답과 풀이가 함께 보여지게」
+  //   범위 = 전체 5 · 전체 20(「전체 범위에서 무작위로 해서 20문항 정도씩」) · 부 5 · 주제 5 · 기록 형식(quiz_log v:1)은 그대로(지난 기록·지식 수준 이어짐)
   let QZ = null;
+  const QOPEN = new Set();   // 고르기 화면에서 펼친 부(이번 실행 동안만)
   const ITEMS = () => { const m = {}; for (const t of D.bank) for (const i of t.items) m[i.id] = Object.assign({}, i, {tid: t.id, ttl: t.code + " " + t.title}); return m; };
-  function pickSet(sel) {   // 약한 문항 먼저(숙달 낮음·안 푼 것 가중) · 5문항
-    const pool = []; for (const t of mastery().topics) if (sel === "all" || sel === t.id) pool.push(...t.items);
-    const w = x => (1 - x.m) * 2 + (x.n ? 0 : 0.5) + 0.2, out = [];
-    while (out.length < 5 && pool.length) {
-      let r = Math.random() * pool.reduce((a, x) => a + w(x), 0), k = 0;
-      for (; k < pool.length - 1; k++) { r -= w(pool[k]); if (r <= 0) break; }
-      out.push(pool.splice(k, 1)[0].i.id);
+  const QPARTS = () => {
+    const ps = [];
+    for (const t of D.topics) {
+      if (!D.bank.some(b => b.id === t.id)) continue;
+      const k = "p:" + t.subj + "-" + t.pno; let p = ps.find(x => x.k === k);
+      if (!p) ps.push(p = {k, name: t.part.replace(/^(\d)\s*/, "$1부 "), tids: []});
+      p.tids.push(t.id);
     }
-    return out;
+    return ps;
+  };
+  const selTids = sel => sel === "all" ? D.bank.map(b => b.id) : sel.startsWith("p:") ? ((QPARTS().find(p => p.k === sel) || {}).tids || []) : [sel];
+  const selName = (sel, n) => {
+    if (sel === "all") return `전체에서 ${n}문항`;
+    if (sel.startsWith("p:")) return (QPARTS().find(p => p.k === sel) || {}).name || "부";
+    const t = T(sel); return t ? t.code + " " + t.title : sel;
+  };
+  const shuf = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  function pickSet(sel, n) {   // 다양하게: 한 세트 안에서 주제가 겹치지 않게 · 약한 문항·안 푼 문항 가중 · 최근 1시간 안에 푼 문항은 덜 나오게
+    const tids = new Set(selTids(sel)), now = Date.now(), recent = new Set(qlog().filter(r => now - r.t < 36e5).map(r => r.q));
+    const pool = []; for (const t of mastery().topics) if (tids.has(t.id)) for (const x of t.items) pool.push(Object.assign({tid: t.id}, x));
+    const w = x => ((1 - x.m) * 2 + (x.n ? 0 : 0.5) + 0.2) * (recent.has(x.i.id) ? 0.25 : 1);
+    const out = [], used = new Set();
+    while (out.length < n && pool.length) {
+      let cand = pool.filter(x => !used.has(x.tid)); if (!cand.length) { used.clear(); cand = pool; }
+      let r = Math.random() * cand.reduce((a, x) => a + w(x), 0), k = 0;
+      for (; k < cand.length - 1; k++) { r -= w(cand[k]); if (r <= 0) break; }
+      const x = cand[k]; pool.splice(pool.indexOf(x), 1); used.add(x.tid); out.push(x.i.id);
+    }
+    return shuf(out);
+  }
+  function newSet(sel, n) {   // 보기 순서도 매번 섞음(「모름」은 늘 맨 아래)
+    const M = ITEMS(), qs = pickSet(sel, n);
+    return {v: 2, sel, n, qs, perm: qs.map(q => shuf(M[q].opts.map((_, j) => j + 1))), pick: {}, cur: 0, done: false, only: false, lg: []};
   }
   const saveDraft = () => { if (QZ && QZ.qs.length) ls.set(K.qdraft, JSON.stringify(Object.assign({}, QZ, {at: Date.now()}))); else ls.del(K.qdraft); };
   function loadDraft() {
-    try { const d = JSON.parse(ls.get(K.qdraft, "null")), M = ITEMS(); if (!d || Date.now() - d.at > 3 * DAY) return null; d.qs = d.qs.filter(q => M[q]); return d.qs.length ? d : null; } catch (e) { return null; }
-  }
-  const newSet = sel => ({sel, qs: pickSet(sel), pick: {}});
-  function quiz(selArg) {
-    if (!D.bank.length) { app.innerHTML = bar("문제", "#/") + `<div class="wrap"><div class="card muted">아직 문항이 없습니다.</div></div>` + nav("quiz"); return; }
-    if (selArg && (!QZ || QZ.sel !== selArg)) QZ = newSet(selArg);
-    if (!QZ) QZ = loadDraft() || null;
-    const sel = (QZ && QZ.sel) || "all", M = ITEMS();
-    const chips = [["all", "전체"], ...D.bank.map(t => [t.id, t.code + " " + t.title])].map(([k, l]) => `<button type="button" class="segb${sel === k ? " on" : ""}" data-qsel="${k}">${escH(l)}</button>`).join("");
-    let body = "";
-    if (QZ && QZ.qs.length) {
-      body = QZ.qs.map((qid, n) => {
-        const it = M[qid], c = QZ.pick[n], done = c != null;
-        const opts = [...it.opts, "모름"].map((o, j) => {
-          const no = j + 1, cls = done ? (no === it.ans ? " ok" : (c === no ? " bad" : "")) : "";
-          return `<label class="opt${cls}"><input type="radio" name="q${n}" value="${no}"${c === no ? " checked" : ""}${done ? " disabled" : ""}><span>${j < 4 ? no + ". " : ""}${escH(o)}</span></label>`;
-        }).join("");
-        const res = done ? `<div class="ex"><b class="${c === it.ans ? "okt" : "badt"}">${c === it.ans ? "맞음" : c === 5 ? "모름" : "틀림"}</b> · 정답은 ${it.ans}번<div class="concept">${escH(it.ex)}</div><a class="basis" href="#/p/${it.tid}/${it.bsid}">근거: 교재 「${escH(it.basis)}」 ›</a></div>` : "";
-        return `<div class="card qz" data-q="${n}"><div class="qn">${n + 1}. ${escH(it.q)} <span class="lvb">${escH(it.kind)}</span></div><div class="muted small">${escH(it.ttl)}</div>${opts}${res}</div>`;
-      }).join("");
-      const ans = QZ.qs.filter((_, n) => QZ.pick[n] != null).length;
-      if (ans === QZ.qs.length) {
-        const ok = QZ.qs.filter((q, n) => QZ.pick[n] === M[q].ans).length;
-        body += `<div class="card done"><b>${QZ.qs.length}문항 중 ${ok}문항 맞음</b><div class="muted small">기록은 이 기기에만 남고 지식 수준에 반영됩니다.</div></div><button type="button" class="big-btn" id="qnew">다시 5문항</button>`;
+    try {
+      const d = JSON.parse(ls.get(K.qdraft, "null")), M = ITEMS();
+      if (!d || Date.now() - d.at > 3 * DAY || !Array.isArray(d.qs) || !d.qs.length || d.qs.some(q => !M[q])) return null;
+      if (d.v !== 2) {   // 지난 판(한 화면 5문항 · 고르는 즉시 기록)을 이어받음 — 이미 남긴 기록은 두 번 남기지 않음
+        const old = d.pick || {};
+        Object.assign(d, {v: 2, n: d.qs.length, perm: d.qs.map(q => M[q].opts.map((_, j) => j + 1)), cur: 0, only: false, lg: Object.keys(old).map(Number)});
+        d.done = d.qs.every((_, i) => old[i] != null);
       }
-    } else body = `<button type="button" class="big-btn" id="qnew">5문항 시작</button>`;
-    app.innerHTML = bar("문제", "#/") + `<div class="wrap">
-      ${rateCard()}
-      <div class="seg wrapseg">${chips}</div>${body}</div>` + nav("quiz");
-    saveDraft();
-    document.querySelectorAll("[data-qsel]").forEach(b => b.onclick = () => { QZ = newSet(b.dataset.qsel); quiz(); window.scrollTo(0, 0); });
-    const nw = $("#qnew"); if (nw) nw.onclick = () => { QZ = newSet(sel); quiz(); window.scrollTo(0, 0); };
-    document.querySelectorAll(".qz input[type=radio]").forEach(r => r.onchange = () => {
-      const n = +r.name.slice(1), c = +r.value, it = M[QZ.qs[n]];
-      if (QZ.pick[n] != null) return;
-      QZ.pick[n] = c;
-      const L = qlog(); L.push({v: 1, q: it.id, t: Date.now(), c, s: c === it.ans ? 1 : 0}); saveLog(L);
-      const y = window.scrollY; quiz(); window.scrollTo(0, y);
-    });
+      return d;
+    } catch (e) { return null; }
+  }
+  const qAnswered = () => QZ.qs.filter((_, i) => QZ.pick[i] != null).length;
+  function startQuiz(sel, n, replace) { QZ = newSet(sel, n); saveDraft(); if (replace) location.replace("#/quiz/go"); else location.hash = "#/quiz/go"; }
+  function rateCard(m) {   // 지식 수준 — 문제 화면 맨 위(대표님 지시 2026-11-12) · 주제별은 아래 부 목록에
+    m = m || mastery();
+    if (!m.all) return "";
+    return `<div class="card rate"><div class="rrow"><span class="t">지식 수준</span><span class="v big">${m.know == null ? "" : pct(m.know) + "%"}</span>${m.know == null
+      ? `<span class="muted small">아직 푼 문제가 없습니다</span>`
+      : `<div class="track"><i style="width:${pct(m.know)}%"></i></div><span class="muted small">푼 문항 ${m.asked} / ${m.all}</span>`}</div></div>`;
+  }
+  const noBank = () => { app.innerHTML = bar("문제") + `<div class="wrap"><div class="card muted">아직 문항이 없습니다.</div></div>` + nav("quiz"); };
+  function quizPick() {   // ① 고르기
+    if (!D.bank.length) return noBank();
+    if (!QZ) QZ = loadDraft();
+    const m = mastery(), byT = {}; for (const t of m.topics) byT[t.id] = t;
+    const pv = x => x == null ? "—" : pct(x) + "%";
+    const partKnow = p => { const ks = p.tids.map(id => byT[id].know).filter(x => x != null); return ks.length ? ks.reduce((a, b) => a + b, 0) / ks.length : null; };
+    const go = (sel, n, label, val) => `<button type="button" class="lrow" data-go="${escH(sel)}|${n}"><span class="lt">${label}</span>${val != null ? `<span class="lval">${val}</span>` : ""}${ic("next", 20)}</button>`;
+    const resume = QZ && !QZ.done ? `<a class="card resume" href="#/quiz/go"><span class="lt"><b>풀던 문제 이어서</b><small>${escH(selName(QZ.sel, QZ.n))} · ${qAnswered()} / ${QZ.qs.length}</small></span>${ic("next", 20)}</a>` : "";
+    const parts = QPARTS().map(p => `<details class="card lcard qpart" data-k="${p.k}"${QOPEN.has(p.k) ? " open" : ""}><summary class="lrow"><span class="lt">${escH(p.name)}</span><span class="lval">${pv(partKnow(p))}</span></summary>${go(p.k, 5, "이 부에서 5문항")}${p.tids.map(id => {
+      const t = T(id); return go(id, 5, `<span class="rk rk-on">${escH(t.code)}</span><span class="tx">${escH(t.title)}</span>`, pv(byT[id].know)); }).join("")}</details>`).join("");
+    app.innerHTML = bar("문제") + `<div class="wrap">${resume}${rateCard(m)}<div class="card lcard">${go("all", 5, "전체에서 5문항")}${go("all", 20, "전체에서 20문항")}</div>${parts}</div>` + nav("quiz");
+    app.querySelectorAll("details[data-k]").forEach(d => d.addEventListener("toggle", () => d.open ? QOPEN.add(d.dataset.k) : QOPEN.delete(d.dataset.k)));
+    app.querySelectorAll("[data-go]").forEach(b => b.onclick = () => { const [s, n] = b.dataset.go.split("|"); startQuiz(s, +n); });
+    window.scrollTo(0, 0);
+  }
+  function quizRun() {   // ② 문제만 — 한 화면에 한 문제 · 풀이 중에는 맞음/틀림을 보이지 않음 · 아래 메뉴 숨김
+    if (!D.bank.length) return noBank();
+    if (!QZ) QZ = loadDraft();
+    if (!QZ) { location.replace("#/quiz"); return; }
+    if (QZ.done) return quizResult();
+    const M = ITEMS(), i = Math.max(0, Math.min(QZ.cur || 0, QZ.qs.length - 1)), it = M[QZ.qs[i]], c = QZ.pick[i], last = i === QZ.qs.length - 1;
+    const opts = [...QZ.perm[i], 5].map((no, j) => `<button type="button" class="opt${c === no ? " sel" : ""}${no === 5 ? " dk" : ""}" data-c="${no}" aria-pressed="${c === no}">${no === 5 ? "" : `<span class="no">${j + 1}</span>`}<span>${escH(no === 5 ? "모름" : it.opts[no - 1])}</span></button>`).join("");
+    app.innerHTML = bar(selName(QZ.sel, QZ.n), "#/quiz") + `<div class="wrap qrun">
+      <div class="qprog"><span>${i + 1} / ${QZ.qs.length}</span><div class="track"><i style="width:${(i + 1) / QZ.qs.length * 100}%"></i></div></div>
+      <div class="card qcard"><div class="qmeta">${escH(it.kind)}${QZ.qs.length && QZ.sel === it.tid ? "" : " · " + escH(it.ttl)}</div><h2 class="qq">${escH(it.q)}</h2><div class="opts">${opts}</div></div>
+      <div class="qnav"><button type="button" class="ghost" id="qprev"${i ? "" : " disabled"}>이전</button><button type="button" class="big-btn" id="qnext"${c != null ? "" : " disabled"}>${last ? "결과 보기" : "다음 문제"}</button></div></div>`;
+    QZ.cur = i; saveDraft();
+    app.querySelectorAll(".opt").forEach(b => b.onclick = () => { QZ.pick[i] = +b.dataset.c; saveDraft(); quizRun(); });
+    $("#qprev").onclick = () => { QZ.cur = i - 1; quizRun(); window.scrollTo(0, 0); };
+    $("#qnext").onclick = () => {
+      if (QZ.pick[i] == null) return;
+      if (!last) { QZ.cur = i + 1; quizRun(); window.scrollTo(0, 0); return; }
+      const L = qlog(), t = Date.now();
+      QZ.qs.forEach((q, k) => { if (QZ.lg.includes(k) || QZ.pick[k] == null) return; const ch = QZ.pick[k]; L.push({v: 1, q, t, c: ch, s: ch === M[q].ans ? 1 : 0}); QZ.lg.push(k); });
+      saveLog(L); QZ.done = true; QZ.only = false; saveDraft(); quizResult(); window.scrollTo(0, 0);
+    };
+  }
+  function quizResult() {   // ③ 결과 — 점수 + 문항마다 내 답·정답·풀이·근거
+    const M = ITEMS(), rs = QZ.qs.map((q, k) => ({k, it: M[q], c: QZ.pick[k]})), ok = rs.filter(r => r.c === r.it.ans).length, bad = rs.length - ok;
+    const card = r => {
+      const st = r.c === r.it.ans ? "ok" : r.c === 5 ? "dk" : "bad";
+      return `<div class="card qres ${st}"><div class="qh"><span class="qno">${r.k + 1}</span><b class="${st === "ok" ? "okt" : "badt"}">${st === "ok" ? "맞음" : st === "dk" ? "모름" : "틀림"}</b>${QZ.sel === r.it.tid ? "" : `<span class="muted small">${escH(r.it.ttl)}</span>`}</div>
+        <div class="qq s">${escH(r.it.q)}</div>${st === "ok" ? "" : `<div class="ans mine"><span>내 답</span><span>${escH(r.c === 5 || r.c == null ? "모름" : r.it.opts[r.c - 1])}</span></div>`}<div class="ans right"><span>정답</span><span>${escH(r.it.opts[r.it.ans - 1])}</span></div>
+        <div class="ex">${escH(r.it.ex)}</div><a class="basis" href="#/p/${r.it.tid}/${r.it.bsid}">근거: 교재 「${escH(r.it.basis)}」${ic("next", 18)}</a></div>`;
+    };
+    const list = rs.filter(r => !QZ.only || r.c !== r.it.ans);
+    app.innerHTML = bar("결과", "#/quiz") + `<div class="wrap">
+      <div class="card score"><div class="sc"><b>${ok}</b><span>/ ${rs.length}</span></div><div class="muted">${escH(selName(QZ.sel, QZ.n))}</div><div class="track"><i style="width:${ok / rs.length * 100}%"></i></div></div>
+      ${bad ? `<div class="seg tabs"><button type="button" class="segb${QZ.only ? "" : " on"}" data-only="0">전체 ${rs.length}</button><button type="button" class="segb${QZ.only ? " on" : ""}" data-only="1">틀린 문제 ${bad}</button></div>` : ""}
+      ${list.map(card).join("")}<button type="button" class="big-btn" id="qagain">같은 범위 다시</button><a class="ghost wide" href="#/quiz">다른 범위 고르기</a></div>` + nav("quiz");
+    app.querySelectorAll("[data-only]").forEach(b => b.onclick = () => { QZ.only = b.dataset.only === "1"; saveDraft(); quizResult(); });
+    $("#qagain").onclick = () => { QZ = newSet(QZ.sel, QZ.n); saveDraft(); quizRun(); window.scrollTo(0, 0); };
   }
 
-  // ------------------------------------------------------------ 설정: 화면 보기 · 대표님 전용 열기 · 이 기기에서 잠그기
+  // ------------------------------------------------------------ 설정(목록형): 화면 보기 · 대표님 전용 열기 · 문제 기록 · 이 기기에서 잠그기
   function settings() {
-    app.innerHTML = bar("설정", "#/") + `<div class="wrap">
-      <div class="card set"><h2>화면 보기</h2><div class="seg">${TH.map(t => `<button type="button" class="segb${getTh() === t ? " on" : ""}" data-set-th="${t}">${THL[t]}</button>`).join("")}</div></div>
-      <div class="card set"><h2>대표님 전용 (학습 기록)</h2>${A
-        ? `<p class="muted small">열려 있습니다 — 아래 메뉴에 기록이 보입니다.</p><button type="button" class="ghost" id="aoff">전용 닫기</button>`
-        : `<form id="af"><input id="apw" type="password" autocomplete="off" placeholder="전용 비밀번호" aria-label="전용 비밀번호"><div class="err" id="aer"></div><button>열기</button></form>`}</div>
-      <div class="card set"><h2>문제 기록</h2><p class="muted small">푼 기록 ${qlog().length}건 · 이 기기에만 저장됩니다.</p><button type="button" class="ghost" id="qclr">문제 기록 지우기</button></div>
-      <div class="card set"><button type="button" class="ghost" id="lo">이 기기에서 잠그기</button></div></div>` + nav("settings");
+    const row = (l, v) => `<div class="lrow static"><span class="lt">${l}</span>${v}</div>`;
+    app.innerHTML = bar("설정") + `<div class="wrap">
+      <h3 class="sec">화면</h3><div class="card lcard">${row("화면 보기", `<div class="seg sm">${TH.map(t => `<button type="button" class="segb${getTh() === t ? " on" : ""}" data-set-th="${t}">${THL[t]}</button>`).join("")}</div>`)}</div>
+      <h3 class="sec">대표님 전용 (학습 기록)</h3><div class="card lcard">${A
+        ? row("전용", `<span class="lval">열림</span>`) + `<button type="button" class="lrow" id="aoff"><span class="lt">전용 닫기</span></button>`
+        : `<form id="af" class="lpad"><input id="apw" type="password" autocomplete="off" placeholder="전용 비밀번호" aria-label="전용 비밀번호"><div class="err" id="aer"></div><button>열기</button></form>`}</div>
+      <h3 class="sec">문제 기록</h3><div class="card lcard">${row("푼 기록", `<span class="lval">${qlog().length}건</span>`)}<button type="button" class="lrow warn" id="qclr"><span class="lt">문제 기록 지우기</span></button></div>
+      <p class="muted small note">문제 기록은 이 기기에만 저장됩니다.</p>
+      <div class="card lcard"><button type="button" class="lrow warn" id="lo"><span class="lt">이 기기에서 잠그기</span></button></div></div>` + nav("settings");
     document.querySelectorAll("[data-set-th]").forEach(b => b.onclick = () => { setTh(b.dataset.setTh); settings(); });
     const off = $("#aoff"); if (off) off.onclick = () => { ls.del(K.akey); location.reload(); };
     $("#qclr").onclick = () => { if (confirm("이 기기의 문제 기록을 지울까요? 지식 수준이 처음으로 돌아갑니다.")) { ls.del(K.qlog); ls.del(K.qdraft); QZ = null; settings(); } };
@@ -367,8 +443,8 @@
   }
   function audBind(tid, title, au) {
     const el = AUD.el, pb = $("#aplay"), sk = $("#aseek"), tm = $("#atime"), rt = $("#arate"), pk = K.pos + tid;
-    const sync = () => { if (AUD.tid !== tid) return; sk.value = Math.floor(el.currentTime); tm.textContent = `${fmtT(el.currentTime)} / ${fmtT(au.dur)}`; pb.textContent = el.paused ? "▶ 이어 듣기" : "❚❚ 일시정지"; };
-    if (AUD.tid !== tid) { const p = +ls.get(pk, "0"); sk.value = p; tm.textContent = `${fmtT(p)} / ${fmtT(au.dur)}`; if (p > 5) pb.textContent = "▶ 이어 듣기"; } else sync();
+    const sync = () => { if (AUD.tid !== tid) return; sk.value = Math.floor(el.currentTime); tm.textContent = `${fmtT(el.currentTime)} / ${fmtT(au.dur)}`; pb.innerHTML = el.paused ? ic("play", 22) + "이어 듣기" : ic("pause", 22) + "일시정지"; };
+    if (AUD.tid !== tid) { const p = +ls.get(pk, "0"); sk.value = p; tm.textContent = `${fmtT(p)} / ${fmtT(au.dur)}`; if (p > 5) pb.innerHTML = ic("play", 22) + "이어 듣기"; } else sync();
     el.ontimeupdate = () => { sync(); if (AUD.tid && Math.floor(el.currentTime) % 5 === 0) ls.set(K.pos + AUD.tid, String(Math.floor(el.currentTime))); };
     el.onplay = el.onpause = sync;
     el.onended = () => { ls.set(K.pos + AUD.tid, "0"); sync(); };
@@ -376,7 +452,7 @@
       if (AUD.tid !== tid) {
         pb.textContent = "받는 중…"; pb.disabled = true;
         try { if (AUD.url) URL.revokeObjectURL(AUD.url); AUD.url = await audLoad(tid, au); }
-        catch (e) { pb.disabled = false; pb.textContent = "▶ 듣기"; toast("음성을 받지 못했습니다(" + e.message + ")"); return; }
+        catch (e) { pb.disabled = false; pb.innerHTML = ic("play", 22) + "듣기"; toast("음성을 받지 못했습니다(" + e.message + ")"); return; }
         pb.disabled = false; AUD.tid = tid; el.src = AUD.url; el.currentTime = +ls.get(pk, "0");
       }
       el.playbackRate = +rt.value; await el.play().catch(() => {});
@@ -419,7 +495,12 @@
     else if (h[0] === "archive") { if (A) archive(); else location.hash = "#/"; }
     else if (h[0] === "search") location.replace("#/");   // 옛 검색 화면 주소 → 홈(검색창이 홈 맨 위로 옮겨 감)
     else if (h[0] === "settings") settings();
-    else if (h[0] === "quiz") quiz(h[1] && decodeURIComponent(h[1]));
+    else if (h[0] === "quiz") {
+      const a = h[1] && decodeURIComponent(h[1]);
+      if (!a) quizPick(); else if (a === "go") quizRun();
+      else if (D.bank.some(b => b.id === a) || a === "all" || a.startsWith("p:")) startQuiz(a, +(h[2] || 5) === 20 ? 20 : 5, true);
+      else location.replace("#/quiz");
+    }
     else { home(); window.scrollTo(0, HOMEY); HOMEY = 0; }
     if (h[0] !== "p") BACK = "#/";
   }
@@ -442,7 +523,7 @@
       if (!changed && A) { try { const a = await fetchAdm(); changed = !!(a && a.ct !== ACT); } catch (e) {} }
       if (!changed) return;
       if (enc.salt !== (ls.get(K.key, "") || "").split(".")[0]) { location.reload(); return; }  // 비밀번호가 바뀜 → 잠금 화면
-      const busy = /^#\/quiz/.test(location.hash) && QZ && QZ.qs.some((_, n) => QZ.pick[n] == null);
+      const busy = /^#\/quiz\/go/.test(location.hash) && QZ && !QZ.done;
       if (resumed && !busy) { applyUpd(); return; }
       askUpd();
     } catch (e) {}
@@ -457,7 +538,7 @@
     el.querySelector('[data-u="now"]').onclick = applyUpd;
     el.querySelector('[data-u="later"]').onclick = () => { UPD = true; el.remove(); if (/^#\/?$/.test(location.hash) || !location.hash) home(); };
   }
-  const updTop = () => UPD ? `<button type="button" class="updtop" id="updtop">⟳ 새 정리가 있습니다 · 눌러서 받기</button>` : "";
+  const updTop = () => UPD ? `<button type="button" class="updtop" id="updtop">${ic("refresh", 18)}새 정리가 있습니다 · 눌러서 받기</button>` : "";
   function toast(t) {
     const el = document.createElement("div"); el.className = "toast"; el.textContent = t; document.body.appendChild(el);
     setTimeout(() => el.remove(), 3500);
