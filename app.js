@@ -262,7 +262,7 @@
       <div class="aud-r"><button type="button" class="ghost" data-sk="-10" aria-label="10초 뒤로">${ic("rew", 20)}10초</button><input type="range" id="aseek" min="0" max="${au.dur}" value="0" aria-label="재생 위치"><button type="button" class="ghost" data-sk="10" aria-label="10초 앞으로">10초${ic("fwd", 20)}</button></div>
       <div class="aud-r"><span class="muted small" id="atime">0:00 / ${fmtT(au.dur)}</span><select id="arate" aria-label="속도">${[0.8, 1, 1.25, 1.5].map(r => `<option value="${r}"${(+ls.get(K.rate, "1")) === r ? " selected" : ""}>${r}배</option>`).join("")}</select></div></div>` : "";
     const hasQ = t && D.bank.some(b => b.id === pid);
-    const after = (hasQ ? `<a class="big-btn link" href="#/quiz/${pid}">이 주제 문제 풀기 (객관식 ${D.bank.find(b => b.id === pid).items.length}문항)</a>` : "")
+    const after = (hasQ ? `<a class="big-btn link" href="#/quiz/${pid}">이 주제 문제 풀기</a>` : "")
       + (A && t && D.pages["rec-" + pid] ? `<a class="recnote" href="#/p/rec-${pid}">이 주제를 공부한 과정은 <b>기록</b>에 있습니다 ›</a>` : "");
     const on = pid === "glossary" ? "glossary" : pg.archive ? "archive" : "home";
     app.innerHTML = bar(pg.title, pg.archive ? "#/archive" : BACK, pid === "glossary" ? "용어집에서 검색" : pg.archive ? "이 기록에서 검색" : "이 교재에서 검색") + `<div class="wrap"><div id="res"></div><div id="pbody">${head}${audH}<article class="doc">${body}</article>${after}</div></div>` + nav(on);
@@ -300,21 +300,33 @@
     const t = T(sel); return t ? t.code + " " + t.title : sel;
   };
   const shuf = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-  function pickSet(sel, n) {   // 다양하게: 한 세트 안에서 주제가 겹치지 않게 · 약한 문항·안 푼 문항 가중 · 최근 1시간 안에 푼 문항은 덜 나오게
-    const tids = new Set(selTids(sel)), now = Date.now(), recent = new Set(qlog().filter(r => now - r.t < 36e5).map(r => r.q));
+  // 매번 다르게(2026-11-15 대표님 「5개 문항씩 나오더라도 매번 같은 문제가 나오지 않도록」) — 고르는 차례:
+  //   ① 24시간 안에 안 푼 문항 → ② 24시간 안에 푼 문항 → ③ 바로 앞 세트의 문항(모자랄 때만) · 같은 차례 안에서는 약한 문항·안 푼 문항 가중
+  //   전체·부 = 한 세트 안에서 주제가 겹치지 않게 · 주제 하나 = 개념 2 · 가르기 2 · 상황 1
+  const QMIX = ["개념", "개념", "가르기", "가르기", "상황"];
+  function pickSet(sel, n, prev) {
+    const tids = new Set(selTids(sel)), now = Date.now(), last = {}, pv = new Set(prev || []);
+    for (const r of qlog()) last[r.q] = Math.max(last[r.q] || 0, r.t);
     const pool = []; for (const t of mastery().topics) if (tids.has(t.id)) for (const x of t.items) pool.push(Object.assign({tid: t.id}, x));
-    const w = x => ((1 - x.m) * 2 + (x.n ? 0 : 0.5) + 0.2) * (recent.has(x.i.id) ? 0.25 : 1);
-    const out = [], used = new Set();
+    const tier = x => pv.has(x.i.id) ? 2 : (!last[x.i.id] || now - last[x.i.id] > DAY) ? 0 : 1;
+    const w = x => (1 - x.m) * 2 + (x.n ? 0 : 0.5) + 0.2;
+    const draw = cand => {
+      const t = Math.min(...cand.map(tier)), c = cand.filter(x => tier(x) === t);
+      let r = Math.random() * c.reduce((a, x) => a + w(x), 0), k = 0;
+      for (; k < c.length - 1; k++) { r -= w(c[k]); if (r <= 0) break; }
+      return c[k];
+    };
+    const out = [], used = new Set(), one = tids.size === 1, mix = shuf(QMIX.slice());
     while (out.length < n && pool.length) {
-      let cand = pool.filter(x => !used.has(x.tid)); if (!cand.length) { used.clear(); cand = pool; }
-      let r = Math.random() * cand.reduce((a, x) => a + w(x), 0), k = 0;
-      for (; k < cand.length - 1; k++) { r -= w(cand[k]); if (r <= 0) break; }
-      const x = cand[k]; pool.splice(pool.indexOf(x), 1); used.add(x.tid); out.push(x.i.id);
+      let cand;
+      if (one) { const kd = mix[out.length]; cand = pool.filter(x => x.i.kind === kd); if (!cand.length) cand = pool; }
+      else { cand = pool.filter(x => !used.has(x.tid)); if (!cand.length) { used.clear(); cand = pool; } }
+      const x = draw(cand); pool.splice(pool.indexOf(x), 1); used.add(x.tid); out.push(x.i.id);
     }
     return shuf(out);
   }
-  function newSet(sel, n) {   // 보기 순서도 매번 섞음(「모름」은 늘 맨 아래)
-    const M = ITEMS(), qs = pickSet(sel, n);
+  function newSet(sel, n, prev) {   // 보기 순서도 매번 섞음(「모름」은 늘 맨 아래)
+    const M = ITEMS(), qs = pickSet(sel, n, prev);
     return {v: 2, sel, n, qs, perm: qs.map(q => shuf(M[q].opts.map((_, j) => j + 1))), pick: {}, cur: 0, done: false, only: false, lg: []};
   }
   const saveDraft = () => { if (QZ && QZ.qs.length) ls.set(K.qdraft, JSON.stringify(Object.assign({}, QZ, {at: Date.now()}))); else ls.del(K.qdraft); };
@@ -331,7 +343,7 @@
     } catch (e) { return null; }
   }
   const qAnswered = () => QZ.qs.filter((_, i) => QZ.pick[i] != null).length;
-  function startQuiz(sel, n, replace) { QZ = newSet(sel, n); saveDraft(); if (replace) location.replace("#/quiz/go"); else location.hash = "#/quiz/go"; }
+  function startQuiz(sel, n, replace) { QZ = newSet(sel, n, QZ && QZ.sel === sel ? QZ.qs : []); saveDraft(); if (replace) location.replace("#/quiz/go"); else location.hash = "#/quiz/go"; }
   function rateCard(m) {   // 지식 수준 — 문제 화면 맨 위(대표님 지시 2026-11-12) · 주제별은 아래 부 목록에
     m = m || mastery();
     if (!m.all) return "";
@@ -391,7 +403,7 @@
       ${bad ? `<div class="seg tabs"><button type="button" class="segb${QZ.only ? "" : " on"}" data-only="0">전체 ${rs.length}</button><button type="button" class="segb${QZ.only ? " on" : ""}" data-only="1">틀린 문제 ${bad}</button></div>` : ""}
       ${list.map(card).join("")}<button type="button" class="big-btn" id="qagain">같은 범위 다시</button><a class="ghost wide" href="#/quiz">다른 범위 고르기</a></div>` + nav("quiz");
     app.querySelectorAll("[data-only]").forEach(b => b.onclick = () => { QZ.only = b.dataset.only === "1"; saveDraft(); quizResult(); });
-    $("#qagain").onclick = () => { QZ = newSet(QZ.sel, QZ.n); saveDraft(); quizRun(); window.scrollTo(0, 0); };
+    $("#qagain").onclick = () => { QZ = newSet(QZ.sel, QZ.n, QZ.qs); saveDraft(); quizRun(); window.scrollTo(0, 0); };
   }
 
   // ------------------------------------------------------------ 설정(목록형): 화면 보기 · 대표님 전용 열기 · 문제 기록 · 이 기기에서 잠그기
