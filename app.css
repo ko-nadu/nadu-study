@@ -106,7 +106,7 @@ a.sess .c{grid-column:1/-1;color:var(--muted);font-size:14.5px;line-height:1.5}
 .doc li{margin:7px 0}
 .doc blockquote{margin:6px 0 14px;padding:12px 14px;border-left:5px solid var(--accent);background:var(--card);border-radius:0 14px 14px 0;font-size:16px;color:var(--text)}
 .doc code{font:13.5px ui-monospace,Consolas,monospace;background:var(--accent-soft);padding:1px 5px;border-radius:5px}
-.doc pre{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px;overflow-x:auto;font-size:13.5px;line-height:1.5}
+.doc pre{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px;overflow-x:auto;font:16px/1.6 ui-monospace,Consolas,monospace}
 .tw{overflow-x:auto;margin:10px 0 14px;border:1px solid var(--line);border-radius:12px;-webkit-overflow-scrolling:touch}
 table{border-collapse:collapse;min-width:100%;background:var(--card);font-size:15px;line-height:1.55}
 th,td{padding:11px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;min-width:92px}
