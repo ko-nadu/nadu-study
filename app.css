@@ -388,6 +388,9 @@ button.opt .no{flex:none;display:grid;place-items:center;width:28px;height:28px;
 button.opt.sel{border-color:var(--accent);background:var(--accent-soft)}
 button.opt.sel .no{background:var(--accent);border-color:var(--accent);color:var(--card)}
 button.opt.dk{color:var(--muted)}
+.aend{display:flex;gap:8px;margin:0 0 6px}.aend[hidden],.aud .big-btn[hidden]{display:none}
+.aend .ghost{flex:none;min-width:120px;min-height:52px;margin:0;color:var(--text);display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.aend .big-btn{flex:1;margin:0}
 .qnav{display:flex;gap:8px}
 .qnav .ghost{flex:none;min-width:88px;min-height:52px;margin:0;color:var(--text)}
 .qnav .big-btn{flex:1;margin:0}

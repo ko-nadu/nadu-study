@@ -257,8 +257,11 @@
     const head = t && stale(t) ? `<div class="stale"><b>확인한 지 오래됨</b> — 마지막 확인 ${escH(t.checked)}(${ageDays(t.checked)}일 전). 도구 기능·이름·가격은 그사이 바뀌었을 수 있습니다.</div>` : "";
     const body = pg.html.replace(/<h1 id="([^"]+)">[\s\S]*?<\/h1>/, '<span id="$1"></span>');
     const au = t && D.audio && D.audio[pid];
+    // 다 들은 뒤 = 「다시 듣기」 · 「다음」(대표님 2026-11-16) — 다음 = 같은 과목에서 다음 작성 주제, 없으면 「다시 듣기」만
+    const nx = t && D.topics.slice(D.topics.indexOf(t) + 1).find(x => x.subj === t.subj && x.has_note);
     const audH = au ? `<div class="card aud">
       <button type="button" class="big-btn" id="aplay">${AUD.tid === pid && !AUD.el.paused ? ic("pause", 22) + "일시정지" : ic("play", 22) + "듣기"}</button>
+      <div class="aend" id="aend" hidden><button type="button" class="${nx ? "ghost" : "big-btn"}" id="aagain">${ic("play", 22)}다시 듣기</button>${nx ? `<button type="button" class="big-btn" id="anext" data-nx="${nx.id}">다음${ic("next", 22)}</button>` : ""}</div>
       <div class="aud-r"><button type="button" class="ghost" data-sk="-10" aria-label="10초 뒤로">${ic("rew", 20)}10초</button><input type="range" id="aseek" min="0" max="${au.dur}" value="0" aria-label="재생 위치"><button type="button" class="ghost" data-sk="10" aria-label="10초 앞으로">10초${ic("fwd", 20)}</button></div>
       <div class="aud-r"><span class="muted small" id="atime">0:00 / ${fmtT(au.dur)}</span><select id="arate" aria-label="속도">${[0.8, 1, 1.25, 1.5].map(r => `<option value="${r}"${(+ls.get(K.rate, "1")) === r ? " selected" : ""}>${r}배</option>`).join("")}</select></div></div>` : "";
     const hasQ = t && D.bank.some(b => b.id === pid);
@@ -268,6 +271,8 @@
     app.innerHTML = bar(pg.title, pg.archive ? "#/archive" : BACK, pid === "glossary" ? "용어집에서 검색" : pg.archive ? "이 기록에서 검색" : "이 교재에서 검색") + `<div class="wrap"><div id="res"></div><div id="pbody">${head}${audH}<article class="doc">${body}</article>${after}</div></div>` + nav(on);
     pageSearch(pid);
     if (au) audBind(pid, pg.title, au);
+    if (au && AUD.next === pid) $("#aplay").click();   // 앞 주제에서 「다음」을 눌러 온 것 → 바로 재생
+    AUD.next = "";
     if (sid) goSec(sid); else window.scrollTo(0, 0);
   }
   function archive() {
@@ -438,7 +443,7 @@
   }
 
   // ------------------------------------------------------------ 음성(공유용) — 공유용 열쇠로 암호화된 음성을 받아 이 기기 보관함에 두고, 풀어서 재생
-  const AUD = {el: new Audio(), tid: "", url: ""};
+  const AUD = {el: new Audio(), tid: "", url: "", next: ""};
   const fmtT = s => { s = Math.max(0, Math.floor(s || 0)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
   async function audLoad(tid, au) {
     let buf;
@@ -456,8 +461,9 @@
     return URL.createObjectURL(new Blob([pt], {type: "audio/mpeg"}));
   }
   function audBind(tid, title, au) {
-    const el = AUD.el, pb = $("#aplay"), sk = $("#aseek"), tm = $("#atime"), rt = $("#arate"), pk = K.pos + tid;
-    const sync = () => { if (AUD.tid !== tid) return; sk.value = Math.floor(el.currentTime); tm.textContent = `${fmtT(el.currentTime)} / ${fmtT(au.dur)}`; pb.innerHTML = el.paused ? ic("play", 22) + "이어 듣기" : ic("pause", 22) + "일시정지"; };
+    const el = AUD.el, pb = $("#aplay"), sk = $("#aseek"), tm = $("#atime"), rt = $("#arate"), ae = $("#aend"), pk = K.pos + tid;
+    const sync = () => { if (AUD.tid !== tid) return; sk.value = Math.floor(el.currentTime); tm.textContent = `${fmtT(el.currentTime)} / ${fmtT(au.dur)}`; pb.innerHTML = el.paused ? ic("play", 22) + "이어 듣기" : ic("pause", 22) + "일시정지";
+      const end = el.ended; pb.hidden = end; ae.hidden = !end; };   // 끝까지 들었으면 「이어 듣기」 대신 「다시 듣기」 · 「다음」
     if (AUD.tid !== tid) { const p = +ls.get(pk, "0"); sk.value = p; tm.textContent = `${fmtT(p)} / ${fmtT(au.dur)}`; if (p > 5) pb.innerHTML = ic("play", 22) + "이어 듣기"; } else sync();
     el.ontimeupdate = () => { sync(); if (AUD.tid && Math.floor(el.currentTime) % 5 === 0) ls.set(K.pos + AUD.tid, String(Math.floor(el.currentTime))); };
     el.onplay = el.onpause = sync;
@@ -479,6 +485,8 @@
       }
     };
     pb.onclick = () => { if (AUD.tid === tid && !el.paused) el.pause(); else go(); };
+    $("#aagain").onclick = () => { if (AUD.tid === tid) el.currentTime = 0; go(); };
+    const an = $("#anext"); if (an) an.onclick = () => { const n = an.dataset.nx; AUD.next = D.audio && D.audio[n] ? n : ""; location.hash = "#/p/" + n; };
     document.querySelectorAll("[data-sk]").forEach(b => b.onclick = () => { if (AUD.tid === tid) el.currentTime = Math.max(0, Math.min(el.duration || au.dur, el.currentTime + (+b.dataset.sk))); });
     sk.oninput = () => { if (AUD.tid === tid) el.currentTime = +sk.value; else ls.set(pk, sk.value); tm.textContent = `${fmtT(+sk.value)} / ${fmtT(au.dur)}`; };
     rt.onchange = () => { ls.set(K.rate, rt.value); el.playbackRate = +rt.value; };
