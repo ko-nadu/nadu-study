@@ -407,7 +407,7 @@ button.opt.dk{color:var(--muted)}
 .ans.mine>span:first-child{color:var(--need)}
 .ans.right{background:color-mix(in srgb,var(--ok) 12%,transparent)}
 .ans.right>span:first-child{color:var(--ok)}
-.qres .ex{background:none;padding:6px 2px 0;margin-top:4px;font-size:15px}
+.qres .ex{background:none;padding:6px 2px 0;margin-top:4px;font-size:16px}
 .qres .basis{gap:2px;font-size:14px}
 .ghost.wide{display:flex;align-items:center;justify-content:center;width:100%;min-height:52px;margin:0 0 14px;color:var(--text);text-decoration:none}
 .fab[hidden]{display:none}
