@@ -412,3 +412,11 @@ button.opt.dk{color:var(--muted)}
 .ghost.wide{display:flex;align-items:center;justify-content:center;width:100%;min-height:52px;margin:0 0 14px;color:var(--text);text-decoration:none}
 .fab[hidden]{display:none}
 .search .x[hidden]{display:none}
+/* 문제 고르기 — 과목 카드(2026-11-16 대표님 「과목 단추 먼저」) · 누르면 그 과목의 범위 단추와 부 목록 */
+details.qsubj>summary{display:block;list-style:none;cursor:pointer}
+details.qsubj>summary::-webkit-details-marker{display:none}
+.qsh{display:flex;align-items:center;min-height:30px;margin-bottom:6px}
+.qsh::after{content:"";flex:none;width:8px;height:8px;margin:0 6px 4px auto;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg)}
+details.qsubj[open] .qsh::after{transform:rotate(-135deg);margin-bottom:-4px}
+details.qsubj[open]>summary{border-color:var(--accent)}
+.qsb{margin:0 0 20px}

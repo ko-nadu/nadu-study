@@ -184,16 +184,16 @@
   const im = rs => { if (!rs.length) return 0; const last = rs.slice(-3).reverse(), w = [3, 2, 1].slice(0, last.length); return last.reduce((a, x, i) => a + x.s * w[i], 0) / w.reduce((a, b) => a + b, 0); };
   function mastery() {
     const by = {}; for (const r of qlog()) (by[r.q] = by[r.q] || []).push(r);
-    let asked = 0, all = 0;
     const topics = D.bank.map(t => {
       const items = t.items.map(i => { const rs = (by[i.id] || []).sort((a, b) => a.t - b.t); return {i, m: im(rs), n: rs.length}; });
-      const ak = items.filter(x => x.n); asked += ak.length; all += items.length;
-      return {id: t.id, code: t.code, subj: t.subj, title: t.title, items, asked: ak.length, know: ak.length ? ak.reduce((a, x) => a + x.m, 0) / ak.length : null};
+      return {id: t.id, code: t.code, subj: t.subj, title: t.title, items, asked: items.filter(x => x.n).length, sum: items.reduce((a, x) => a + x.m, 0)};
     });
-    const kt = topics.filter(t => t.know != null);
-    return {topics, know: kt.length ? kt.reduce((a, t) => a + t.know, 0) / kt.length : null, asked, all};
+    return {topics};
   }
+  // 범위(과목·부·주제)의 지식 수준 = 그 범위 전체 문항의 숙달 평균 — 안 푼 문항은 0(대표님 결정 2026-11-16 「과목 전체 문항 기준」: 진도가 드러나게)
+  const knowOf = ts => { let all = 0, sum = 0, asked = 0; for (const t of ts) { all += t.items.length; sum += t.sum; asked += t.asked; } return {know: all ? sum / all : 0, asked, all}; };
   const pct = x => Math.round((x || 0) * 100);
+  const pctx = x => { const v = (x || 0) * 100; return v > 0 && v < 10 ? (Math.round(v * 10) / 10).toFixed(1) : String(Math.round(v)); };   // 지식 수준 글자 — 10% 아래는 소수 한 자리(몇 문항 맞혀도 0%로 보이지 않게)
 
 
   // ------------------------------------------------------------ 홈 — 과목 단추 → 부 → 주제(대표님 지시 2026-11-12: 첫 화면은 과목 단추만)
@@ -283,21 +283,25 @@
   let QZ = null;
   const QOPEN = new Set();   // 고르기 화면에서 펼친 부(이번 실행 동안만)
   const ITEMS = () => { const m = {}; for (const t of D.bank) for (const i of t.items) m[i.id] = Object.assign({}, i, {tid: t.id, ttl: t.code + " " + t.title}); return m; };
+  //   과목별(대표님 지시 2026-11-16 「과목별로 되어 있지 않고 … 바이브코딩 중심」 → 결정 「과목 단추 먼저」): 범위 = 과목 전체(s:과목) · 부(p:과목-번호) · 주제
   const QPARTS = () => {
     const ps = [];
     for (const t of D.topics) {
       if (!D.bank.some(b => b.id === t.id)) continue;
       const k = "p:" + t.subj + "-" + t.pno; let p = ps.find(x => x.k === k);
-      if (!p) ps.push(p = {k, name: t.part.replace(/^(\d)\s*/, "$1부 "), tids: []});
+      if (!p) ps.push(p = {k, subj: t.subj, name: t.part.replace(/^(\d)\s*/, "$1부 "), tids: []});
       p.tids.push(t.id);
     }
     return ps;
   };
-  const selTids = sel => sel === "all" ? D.bank.map(b => b.id) : sel.startsWith("p:") ? ((QPARTS().find(p => p.k === sel) || {}).tids || []) : [sel];
-  const selName = (sel, n) => {
-    if (sel === "all") return `전체에서 ${n}문항`;
-    if (sel.startsWith("p:")) return (QPARTS().find(p => p.k === sel) || {}).name || "부";
-    const t = T(sel); return t ? t.code + " " + t.title : sel;
+  const QSUBJ = () => { const ps = QPARTS(); return D.subjects.map(s => ({k: "s:" + s.id, name: s.name, parts: ps.filter(p => p.subj === s.id), tids: D.bank.filter(b => b.subj === s.id).map(b => b.id)})).filter(s => s.tids.length); };
+  const sjName = id => (D.subjects.find(s => s.id === id) || {}).name || "";
+  const selTids = sel => sel === "all" ? D.bank.map(b => b.id) : sel.startsWith("s:") ? D.bank.filter(b => "s:" + b.subj === sel).map(b => b.id) : sel.startsWith("p:") ? ((QPARTS().find(p => p.k === sel) || {}).tids || []) : [sel];
+  const selName = (sel, n) => {   // 범위 이름에 과목 이름(「1부」가 어느 과목인지 보이게)
+    if (sel === "all") return `전체에서 ${n}문항`;   // 지난 판 임시 저장(과목을 나누기 전)
+    if (sel.startsWith("s:")) return `${sjName(sel.slice(2))} 전체에서 ${n}문항`;
+    if (sel.startsWith("p:")) { const p = QPARTS().find(p => p.k === sel); return p ? sjName(p.subj) + " " + p.name : "부"; }
+    const t = T(sel); return t ? sjName(t.subj) + " " + t.code + " " + t.title : sel;
   };
   const shuf = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
   // 매번 다르게(2026-11-15 대표님 「5개 문항씩 나오더라도 매번 같은 문제가 나오지 않도록」) — 고르는 차례:
@@ -344,25 +348,23 @@
   }
   const qAnswered = () => QZ.qs.filter((_, i) => QZ.pick[i] != null).length;
   function startQuiz(sel, n, replace) { QZ = newSet(sel, n, QZ && QZ.sel === sel ? QZ.qs : []); saveDraft(); if (replace) location.replace("#/quiz/go"); else location.hash = "#/quiz/go"; }
-  function rateCard(m) {   // 지식 수준 — 문제 화면 맨 위(대표님 지시 2026-11-12) · 주제별은 아래 부 목록에
-    m = m || mastery();
-    if (!m.all) return "";
-    return `<div class="card rate"><div class="rrow"><span class="t">지식 수준</span><span class="v big">${m.know == null ? "" : pct(m.know) + "%"}</span>${m.know == null
-      ? `<span class="muted small">아직 푼 문제가 없습니다</span>`
-      : `<div class="track"><i style="width:${pct(m.know)}%"></i></div><span class="muted small">푼 문항 ${m.asked} / ${m.all}</span>`}</div></div>`;
-  }
+  const rateRow = k => `<div class="rrow"><span class="t">지식 수준</span><span class="v big">${k.asked ? pctx(k.know) + "%" : ""}</span>${k.asked
+    ? `<div class="track"><i style="width:${(k.know * 100).toFixed(2)}%"></i></div><span class="muted small">푼 문항 ${k.asked} / ${k.all}</span>`
+    : `<span class="muted small">아직 푼 문제가 없습니다</span>`}</div>`;
   const noBank = () => { app.innerHTML = bar("문제") + `<div class="wrap"><div class="card muted">아직 문항이 없습니다.</div></div>` + nav("quiz"); };
   function quizPick() {   // ① 고르기
     if (!D.bank.length) return noBank();
     if (!QZ) QZ = loadDraft();
     const m = mastery(), byT = {}; for (const t of m.topics) byT[t.id] = t;
-    const pv = x => x == null ? "—" : pct(x) + "%";
-    const partKnow = p => { const ks = p.tids.map(id => byT[id].know).filter(x => x != null); return ks.length ? ks.reduce((a, b) => a + b, 0) / ks.length : null; };
+    const kOf = ids => knowOf(ids.map(id => byT[id]).filter(Boolean));
+    const pv = ids => { const k = kOf(ids); return k.asked ? pctx(k.know) + "%" : "—"; };
     const go = (sel, n, label, val) => `<button type="button" class="lrow" data-go="${escH(sel)}|${n}"><span class="lt">${label}</span>${val != null ? `<span class="lval">${val}</span>` : ""}${ic("next", 20)}</button>`;
     const resume = QZ && !QZ.done ? `<a class="card resume" href="#/quiz/go"><span class="lt"><b>풀던 문제 이어서</b><small>${escH(selName(QZ.sel, QZ.n))} · ${qAnswered()} / ${QZ.qs.length}</small></span>${ic("next", 20)}</a>` : "";
-    const parts = QPARTS().map(p => `<details class="card lcard qpart" data-k="${p.k}"${QOPEN.has(p.k) ? " open" : ""}><summary class="lrow"><span class="lt">${escH(p.name)}</span><span class="lval">${pv(partKnow(p))}</span></summary>${go(p.k, 5, "이 부에서 5문항")}${p.tids.map(id => {
-      const t = T(id); return go(id, 5, `<span class="rk rk-on">${escH(t.code)}</span><span class="tx">${escH(t.title)}</span>`, pv(byT[id].know)); }).join("")}</details>`).join("");
-    app.innerHTML = bar("문제") + `<div class="wrap">${resume}${rateCard(m)}<div class="card lcard">${go("all", 5, "전체에서 5문항")}${go("all", 20, "전체에서 20문항")}</div>${parts}</div>` + nav("quiz");
+    const part = p => `<details class="card lcard qpart" data-k="${p.k}"${QOPEN.has(p.k) ? " open" : ""}><summary class="lrow"><span class="lt">${escH(p.name)}</span><span class="lval">${pv(p.tids)}</span></summary>${go(p.k, 5, "이 부에서 5문항")}${p.tids.map(id => {
+      const t = T(id); return go(id, 5, `<span class="rk rk-on">${escH(t.code)}</span><span class="tx">${escH(t.title)}</span>`, pv([id])); }).join("")}</details>`;
+    // 과목 카드(지식 수준 = 과목마다 · 문제 화면 맨 위 대표님 지시 2026-11-12) → 누르면 그 과목의 전체 5 · 20문항과 부 목록
+    const subj = s => `<details class="qsubj" data-k="${s.k}"${QOPEN.has(s.k) ? " open" : ""}><summary class="card rate"><div class="qsh"><span class="sj-t">${escH(s.name)}</span></div>${rateRow(kOf(s.tids))}</summary><div class="qsb"><div class="card lcard">${go(s.k, 5, "이 과목 전체에서 5문항")}${go(s.k, 20, "이 과목 전체에서 20문항")}</div>${s.parts.map(part).join("")}</div></details>`;
+    app.innerHTML = bar("문제") + `<div class="wrap">${resume}${QSUBJ().map(subj).join("")}</div>` + nav("quiz");
     app.querySelectorAll("details[data-k]").forEach(d => d.addEventListener("toggle", () => d.open ? QOPEN.add(d.dataset.k) : QOPEN.delete(d.dataset.k)));
     app.querySelectorAll("[data-go]").forEach(b => b.onclick = () => { const [s, n] = b.dataset.go.split("|"); startQuiz(s, +n); });
     window.scrollTo(0, 0);
@@ -510,7 +512,7 @@
     else if (h[0] === "quiz") {
       const a = h[1] && decodeURIComponent(h[1]);
       if (!a) quizPick(); else if (a === "go") quizRun();
-      else if (D.bank.some(b => b.id === a) || a === "all" || a.startsWith("p:")) startQuiz(a, +(h[2] || 5) === 20 ? 20 : 5, true);
+      else if (D.bank.some(b => b.id === a) || a === "all" || a.startsWith("s:") || a.startsWith("p:")) startQuiz(a, +(h[2] || 5) === 20 ? 20 : 5, true);
       else location.replace("#/quiz");
     }
     else { home(); window.scrollTo(0, HOMEY); HOMEY = 0; }
